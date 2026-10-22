@@ -3,7 +3,9 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 
-/** Native modal supplies a focus trap, inert background, and Escape support. */
+/** Shared dialog shell. The native top layer traps focus and makes the page inert.
+ * The caller owns open/closed state; busy prevents dismissal while a write is pending.
+ */
 export function Modal({
   title,
   description,
@@ -20,9 +22,11 @@ export function Modal({
   children: ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
+  // Capture the opener before showModal moves focus; restore it after cancel/close.
   const previousActive = useRef<HTMLElement | null>(
     document.activeElement as HTMLElement | null,
   )
+  // Per-instance IDs connect the dialog's accessible name/description without collisions.
   const titleId = useId()
   const descriptionId = useId()
   useEffect(() => {
@@ -31,9 +35,12 @@ export function Modal({
     dialog?.showModal()
     return () => {
       dialog?.close()
-      previous?.focus()
+      // Refreshing after a conflict can replace the opener's row. Never focus a detached node.
+      if (previous?.isConnected) previous.focus()
+      else document.querySelector<HTMLElement>('#main-content')?.focus()
     }
   }, [])
+  // A body portal avoids clipping/stacking contexts from the directory card.
   return createPortal(
     <dialog
       ref={ref}
@@ -41,11 +48,13 @@ export function Modal({
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {
+        // Keep React as the source of truth instead of letting Escape silently close the DOM.
         event.preventDefault()
         if (!busy) onClose()
       }}
       onClick={(event) => {
         if (event.target !== event.currentTarget || busy) return
+        // Native backdrop clicks target the dialog too. Bounds distinguish backdrop from padding.
         const box = event.currentTarget.getBoundingClientRect()
         if (
           event.clientX < box.left ||

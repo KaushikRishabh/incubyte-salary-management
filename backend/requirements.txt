@@ -1,3 +1,5 @@
+# Exact direct dependency versions make local verification reproducible.
+# httpx supports the in-process API test client used by tests and benchmark.py.
 fastapi==0.141.1
 uvicorn==0.52.1
 pydantic==2.13.4

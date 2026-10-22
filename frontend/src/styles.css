@@ -1,3 +1,4 @@
+/* Global design tokens and system-font fallbacks. No font files or third-party requests are needed. */
 :root {
   font-family:
     Inter,
@@ -21,6 +22,7 @@
   --focus: #2b8574;
   --accent: #d9eebf;
 }
+/* Normalize box sizing so declared widths include padding/borders across the responsive layout. */
 * {
   box-sizing: border-box;
 }
@@ -44,6 +46,7 @@ textarea {
 button {
   cursor: pointer;
 }
+/* Disabled controls remain visible but communicate that pending/invalid actions cannot be repeated. */
 button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -54,6 +57,7 @@ button {
 a {
   color: inherit;
 }
+/* Visible keyboard focus is separate from hover, so keyboard-only interaction is discoverable. */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -70,6 +74,7 @@ button svg,
 .button svg {
   flex-shrink: 0;
 }
+/* Shared form controls: full-width fields, clear focus rings, and consistent native input behavior. */
 input,
 select,
 textarea {
@@ -121,6 +126,7 @@ h3,
 p {
   margin: 0;
 }
+/* Visually hide helper text without removing accessible names/captions from the accessibility tree. */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -132,6 +138,7 @@ p {
   white-space: nowrap;
   border: 0;
 }
+/* Desktop shell: a fixed navigation rail with the content offset by the same width. */
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -147,6 +154,7 @@ p {
   padding: 28px 16px 18px;
   z-index: 10;
 }
+/* Locally rendered wordmark and geometric mark; decorative presentation, not an external image. */
 .brand {
   display: flex;
   align-items: center;
@@ -174,6 +182,7 @@ p {
 .brand-dot {
   color: #80a784;
 }
+/* Workspace identity groups the organization name and its compact avatar. */
 .workspace-label {
   display: flex;
   align-items: center;
@@ -213,6 +222,7 @@ p {
 .workspace-label svg {
   color: #85938b;
 }
+/* Navigation hierarchy and active state. Button text stays in the DOM even in the collapsed rail. */
 .nav-section-label {
   font-size: 9px;
   font-weight: 700;
@@ -253,6 +263,7 @@ p {
   border-radius: 50%;
   margin-left: auto;
 }
+/* Non-interactive product context; flex layout keeps the workspace footer at the bottom. */
 .sidebar-note {
   border: 1px solid #e3eadd;
   border-radius: 9px;
@@ -286,6 +297,7 @@ p {
   font-size: 9px;
   color: #8a987e;
 }
+/* Persistent demo identity, explicitly not a real signed-in account or authentication control. */
 .sidebar-footer {
   margin-top: auto;
   border-top: 1px solid var(--line);
@@ -321,10 +333,12 @@ p {
   margin-left: auto;
   color: #9aa799;
 }
+/* Match this desktop offset to .sidebar; media queries below adjust both together. */
 .main-shell {
   margin-left: 226px;
   width: calc(100% - 226px);
 }
+/* Breadcrumb and demo badge provide orientation independently of the active content view. */
 .topbar {
   height: 71px;
   padding: 0 36px;
@@ -378,6 +392,7 @@ main {
   padding: 24px 36px 0;
   margin: 0 auto;
 }
+/* Always-visible synthetic-data warning before any salary workflow. */
 .demo-banner {
   display: flex;
   align-items: center;
@@ -409,6 +424,7 @@ main {
   color: #7f9272;
   flex-shrink: 0;
 }
+/* Page title and primary actions share a row until small screens require vertical stacking. */
 .page-heading {
   display: flex;
   align-items: center;
@@ -444,6 +460,7 @@ main {
   margin-top: 7px;
   flex-shrink: 0;
 }
+/* Reusable action styling. Semantic variants communicate primary, secondary, and archive intent. */
 .button {
   display: inline-flex;
   align-items: center;
@@ -498,6 +515,7 @@ main {
   padding: 0 11px;
   font-size: 10px;
 }
+/* Section labels and headcount contextualize the currently filtered data. */
 .section-label-row {
   display: flex;
   align-items: center;
@@ -523,6 +541,7 @@ main {
   font-size: 10px;
   color: #8a9786;
 }
+/* Five supported currencies can sit side-by-side; minmax(0, 1fr) prevents content-driven overflow. */
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -536,6 +555,7 @@ main {
   padding: 16px 15px 12px;
   box-shadow: 0 1px 3px #1c372a04;
 }
+/* The first currency card receives visual emphasis only; no cross-currency ranking is implied. */
 .metric-card.featured {
   background: #285a4c;
   border-color: #285a4c;
@@ -581,6 +601,7 @@ main {
 .featured .metric-caption {
   color: #b0c8b7;
 }
+/* Large summary values are compact presentation labels; the components retain exact amounts in titles. */
 .metric-amount {
   display: flex;
   gap: 6px;
@@ -633,6 +654,7 @@ main {
 .featured .metric-bottom > strong {
   color: #d7e5c9;
 }
+/* Currency-separation explanation and an explicit no-results state for aggregates. */
 .summary-footnote {
   display: flex;
   align-items: center;
@@ -653,6 +675,7 @@ main {
   color: #88937e;
   font-size: 12px;
 }
+/* Shared container for employee rows and grouped analytics; the filters stay in a stable position. */
 .data-card {
   background: #fff;
   border: 1px solid #e2e9df;
@@ -678,6 +701,7 @@ main {
   margin-top: 5px;
   color: #a0aa94;
 }
+/* Search and exact-match dropdowns use flexible widths and wrap at narrower breakpoints. */
 .filter-bar {
   padding: 0 22px 19px;
   display: flex;
@@ -705,6 +729,7 @@ main {
 .search-input input::placeholder {
   color: #a5ae9a;
 }
+/* Keep the native select operable while positioning a decorative custom chevron over it. */
 .filter-select {
   position: relative;
   flex: 1;
@@ -727,6 +752,7 @@ main {
   pointer-events: none;
   color: #9fac90;
 }
+/* Status selection is a group of real buttons, with current filter and grouping controls beside it. */
 .table-context {
   display: flex;
   justify-content: space-between;
@@ -781,6 +807,7 @@ main {
   text-decoration: none;
   color: #92a283;
 }
+/* Dense tables scroll horizontally within the card rather than squeezing salary columns illegibly. */
 .table-scroll {
   overflow-x: auto;
   width: 100%;
@@ -826,6 +853,7 @@ td {
 .employee-table tbody tr:hover {
   background: #fbfcf8;
 }
+/* Row identity combines decorative initials with a named record-opening button. */
 .person-cell {
   display: flex;
   align-items: center;
@@ -844,6 +872,7 @@ td {
   font-weight: 500;
   border: 1px solid #e5ebda;
 }
+/* Deterministic avatar colors are cosmetic and must never encode employee status or compensation. */
 .tone-0 {
   background: #e7edf2;
   color: #7794a4;
@@ -907,6 +936,7 @@ td {
   color: #95a181;
   white-space: nowrap;
 }
+/* Right alignment and tabular digits make monetary columns easier to compare within a currency. */
 .numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -917,6 +947,7 @@ td {
   font-weight: 550;
   color: #687b50;
 }
+/* Status text is always present, so meaning does not depend on the colored dot alone. */
 .status {
   display: inline-flex;
   align-items: center;
@@ -946,6 +977,7 @@ td {
 .actions-heading {
   text-align: right;
 }
+/* Compact per-employee buttons carry accessible labels in JSX; icons alone are decorative. */
 .row-actions {
   display: flex;
   align-items: center;
@@ -969,6 +1001,7 @@ td {
   background: #eff4e8;
   color: #69814f;
 }
+/* Server-side pagination controls keep range, page size, and navigation distinguishable. */
 .pagination {
   display: flex;
   justify-content: space-between;
@@ -1043,6 +1076,7 @@ td {
   align-items: center;
   gap: 5px;
 }
+/* Exact values in the insights table complement compact overview cards; preserve row readability. */
 .analytics-table {
   min-width: 1040px;
 }
@@ -1080,6 +1114,7 @@ td {
   color: #7b8c65;
   border-color: #e3e9db;
 }
+/* Loading, empty, and failed reads have separate components and clear recovery actions. */
 .empty-state {
   text-align: center;
   display: flex;
@@ -1121,6 +1156,7 @@ td {
   color: #b28b72;
   background: #f8f0ea;
 }
+/* Inline feedback preserves line breaks from field/row errors and keeps icons from shrinking. */
 .alert {
   padding: 12px 14px;
   border-radius: 7px;
@@ -1164,6 +1200,7 @@ td {
 .inline-alert {
   margin: 0 22px 15px;
 }
+/* Skeletons reserve space while reads are pending; reduced-motion overrides disable animation. */
 .skeleton {
   display: block;
   height: 12px;
@@ -1219,6 +1256,7 @@ td {
     transform: rotate(360deg);
   }
 }
+/* Native dialog enters the browser top layer. Dynamic viewport height keeps it usable with mobile chrome. */
 .dialog {
   border: 1px solid #dae3d5;
   border-radius: 13px;
@@ -1234,10 +1272,12 @@ td {
 .dialog.dialog-wide {
   width: 680px;
 }
+/* Dim the inert background; focus trapping and dismissal behavior come from Modal.tsx, not CSS. */
 .dialog::backdrop {
   background: #14302555;
   backdrop-filter: blur(3px);
 }
+/* Shared dialog frame: heading, independently padded body, and action footer. */
 .dialog-heading {
   padding: 25px 28px 22px;
   display: flex;
@@ -1263,6 +1303,12 @@ td {
 .dialog-heading .icon-button {
   align-self: flex-start;
 }
+/* Fieldset disables a pending form as one unit without introducing native borders or min-width. */
+fieldset.dialog-body {
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
+}
 .dialog-body {
   padding: 24px 28px;
 }
@@ -1286,6 +1332,7 @@ td {
   display: flex;
   gap: 8px;
 }
+/* Numbered form sections organize employee identity separately from compensation changes. */
 .form-section-heading {
   display: flex;
   align-items: center;
@@ -1306,6 +1353,7 @@ td {
   font-weight: 600;
   color: #627951;
 }
+/* Two-column form on wider screens; .full-width spans both columns for longer inputs. */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1333,6 +1381,7 @@ td {
 .form-grid textarea::placeholder {
   color: #aebb9d;
 }
+/* Supporting input guidance remains visible and is not a substitute for the field label. */
 .field-hint {
   display: block;
   font-size: 10px;
@@ -1343,6 +1392,7 @@ td {
 .dialog-body > p.field-hint {
   margin-top: 10px;
 }
+/* Show the exact employee targeted by archive/restore/history so actions retain context. */
 .employee-preview {
   display: flex;
   gap: 11px;
@@ -1371,6 +1421,7 @@ td {
 .history-body {
   min-height: 250px;
 }
+/* Ordered audit history: connecting lines are decorative, while dates/reasons remain real text. */
 .timeline {
   list-style: none;
   margin: 3px 0;
@@ -1435,6 +1486,7 @@ td {
   color: #acba98;
   white-space: nowrap;
 }
+/* Old/new monetary values may wrap on narrow screens and retain distinct currency labels. */
 .salary-change {
   display: flex;
   gap: 7px;
@@ -1452,6 +1504,7 @@ td {
 .salary-change > span {
   color: #b8c5a6;
 }
+/* User-authored audit reasons wrap safely rather than forcing the dialog wider. */
 .history-reason {
   font-size: 12px;
   color: #90a673;
@@ -1460,6 +1513,7 @@ td {
   overflow-wrap: anywhere;
   margin-bottom: 6px;
 }
+/* CSV instructions are numbered to match template download followed by file/paste selection. */
 .import-step {
   display: flex;
   gap: 12px;
@@ -1487,6 +1541,7 @@ td {
   color: #a1b18a;
   margin: 4px 0 3px;
 }
+/* The invisible native file input covers its label; focus-within provides visible keyboard focus. */
 .file-drop {
   position: relative;
   border: 1px dashed #b8cd9b;
@@ -1522,6 +1577,7 @@ td {
   outline: 3px solid #9fbd7e;
   outline-offset: 3px;
 }
+/* Monospace editable CSV preserves column separators and scrolls long rows without altering text. */
 .csv-input {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px;
@@ -1530,6 +1586,7 @@ td {
   white-space: pre;
   overflow: auto;
 }
+/* Non-blocking status notification; width is bounded so messages remain on-screen on mobile. */
 .toast {
   position: fixed;
   bottom: 25px;
@@ -1557,6 +1614,7 @@ td {
   background: #eff5e5;
   flex-shrink: 0;
 }
+/* Large displays: increase breathing room and type size without changing application behavior. */
 @media (min-width: 1650px) {
   main {
     padding-left: 48px;
@@ -1603,6 +1661,7 @@ td {
     font-size: 10px;
   }
 }
+/* Small laptops: narrow the sidebar and spacing before changing the main layout. */
 @media (max-width: 1250px) {
   .sidebar {
     width: 196px;
@@ -1673,6 +1732,7 @@ td {
     flex: 1.4;
   }
 }
+/* Tablets: collapse the navigation to icons, wrap filters, and use three summary columns. */
 @media (max-width: 1020px) {
   .sidebar {
     width: 76px;
@@ -1774,6 +1834,7 @@ td {
     justify-content: flex-end;
   }
 }
+/* Phones and small tablets: stack header actions, use two summary columns, and tighten dialogs. */
 @media (max-width: 740px) {
   main {
     padding: 18px 18px 0;
@@ -1961,6 +2022,7 @@ td {
     font-size: 10px;
   }
 }
+/* Narrow phones: reduce rail width and stack form fields into a single readable column. */
 @media (max-width: 480px) {
   .sidebar {
     width: 55px;
@@ -2102,6 +2164,7 @@ td {
     font-size: 9px;
   }
 }
+/* Respect the OS motion preference for shimmer, spinner, and interaction transitions. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -2111,7 +2174,8 @@ td {
     scroll-behavior: auto !important;
   }
 }
-/* Keep secondary text legible on white while preserving a quiet visual hierarchy. */
+/* Final contrast/type refinements intentionally override earlier component colors.
+   Keep these after the base/responsive rules so secondary text remains readable. */
 .page-heading p,
 .data-card-heading p,
 .breadcrumb > span,
@@ -2328,6 +2392,7 @@ th {
     font-size: 10px;
   }
 }
+/* The skip link is first in keyboard order, visually revealed only when focused. */
 .skip-link {
   position: fixed;
   top: 8px;

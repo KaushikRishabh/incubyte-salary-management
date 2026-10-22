@@ -1,4 +1,5 @@
 {
+  // Build browser code and the Vite config as separate projects with their own environments.
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },

@@ -6,6 +6,9 @@ import { Icon } from './Icon'
 import { Modal } from './Modal'
 import type { Employee, EmployeeInput, Options } from './types'
 
+/** One controlled form handles creation and updates. onSaved closes and refreshes
+ * the parent; onStale refreshes its data without discarding the user's unsaved inputs.
+ */
 export function EmployeeForm({
   employee,
   options,
@@ -19,6 +22,8 @@ export function EmployeeForm({
   onSaved: (message: string) => void
   onStale: () => void
 }) {
+  // Initialize once from the selected record. The dialog unmounts when closed, so
+  // reopening starts with the latest version instead of a previous draft.
   const [form, setForm] = useState<EmployeeInput>({
     employee_code: employee?.employee_code || '',
     name: employee?.name || '',
@@ -26,6 +31,7 @@ export function EmployeeForm({
     job_title: employee?.job_title || '',
     country: employee?.country || '',
     currency: employee?.currency || 'USD',
+    // Existing JPY values may be serialized with .00; whole-yen editing must not reject them.
     annual_salary:
       employee?.currency === 'JPY'
         ? employee.annual_salary.split('.')[0]
@@ -36,7 +42,9 @@ export function EmployeeForm({
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // A conflict must never be retried with a newer token and silently overwrite another edit.
   const [stale, setStale] = useState(false)
+  // Generic key/value typing prevents assigning (for example) a string to version.
   function field<K extends keyof EmployeeInput>(
     name: K,
     value: EmployeeInput[K],
@@ -46,6 +54,8 @@ export function EmployeeForm({
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (busy || stale) return
+    // These checks improve feedback only; the API independently enforces all constraints.
+    // Keep the payload as a string. Number is used solely for bounded comparisons.
     if (
       !/^\d+(\.\d{1,2})?$/.test(form.annual_salary) ||
       Number(form.annual_salary) <= 0
@@ -79,6 +89,7 @@ export function EmployeeForm({
       )
     } catch (failure) {
       setError(errorText(failure))
+      // A create-time 409 is a duplicate ID, not a stale edit: allow correction and retry.
       if (employee && failure instanceof ApiError && failure.status === 409) {
         setStale(true)
         onStale()
@@ -87,6 +98,7 @@ export function EmployeeForm({
       setBusy(false)
     }
   }
+  // Retain the selected currency if the options request is unavailable or incomplete.
   const currencies = [...new Set([...options.currencies, form.currency])]
     .filter(Boolean)
     .sort()
@@ -103,7 +115,8 @@ export function EmployeeForm({
       wide
     >
       <form onSubmit={submit} className="employee-form">
-        <div className="dialog-body">
+        {/* Lock inputs as well as dismissal: users must not edit a draft already in flight. */}
+        <fieldset className="dialog-body" disabled={busy}>
           {error && (
             <div className="alert error" role="alert">
               <Icon name="info" />
@@ -122,6 +135,8 @@ export function EmployeeForm({
             <span>01</span>
             <h3>Employee details</h3>
           </div>
+          {/* Wrapping labels give every input an accessible name; native required/length
+              constraints handle basic validation before the submit handler runs. */}
           <div className="form-grid">
             <label>
               Full name
@@ -199,6 +214,8 @@ export function EmployeeForm({
             <span>02</span>
             <h3>Annual base salary</h3>
           </div>
+          {/* Decimal salary text avoids browser number-input coercion/exponent notation.
+              Date bounds prevent future scheduling or reversing the current effective date. */}
           <div className="form-grid compensation-fields">
             <label>
               Currency
@@ -260,7 +277,7 @@ export function EmployeeForm({
               />
             </label>
           </div>
-        </div>
+        </fieldset>
         <footer className="dialog-footer">
           <span>
             <Icon name="shield" size={15} /> Changes are recorded

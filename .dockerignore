@@ -1,3 +1,4 @@
+# Send only source/configuration to the container build, never local state or dependencies.
 .git
 .venv
 **/node_modules

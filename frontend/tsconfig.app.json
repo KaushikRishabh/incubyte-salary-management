@@ -1,17 +1,21 @@
 {
   "compilerOptions": {
+    // Modern browsers provide ES2022 and DOM APIs; Vite owns the emitted JavaScript.
     "target": "ES2022",
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    // Match the bundler's module semantics instead of Node's runtime resolution rules.
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
+    // tsc is a validation stage only; React's automatic JSX runtime is applied by Vite.
     "noEmit": true,
     "jsx": "react-jsx",
+    // Fail builds for unsafe nullability, unused declarations, and accidental switch fallthrough.
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

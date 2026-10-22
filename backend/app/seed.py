@@ -1,11 +1,19 @@
-"""Deterministic, idempotent seed. No external source or real employee data."""
+"""Deterministic, idempotent fictional employee data for demos and verification.
+
+The same code always maps to the same baseline profile/salary. Existing rows are
+never overwritten, so restarting after user edits preserves those changes. This
+is an operator CLI utility, not a publicly accessible import or reset endpoint.
+"""
 
 import argparse
 import os
+from contextlib import closing
 from pathlib import Path
 
 from .database import connect, initialize
 
+# Baseline amounts are already minor units: INR/USD/EUR/GBP use hundredths,
+# whereas JPY is whole yen. These are sample numbers, not market-salary research.
 LOCATIONS = [
     ("India", "INR", 180000000),
     ("United States", "USD", 11000000),
@@ -23,12 +31,20 @@ DEPARTMENTS = [
 
 
 def seed(path: str, count: int = 10000) -> int:
+    """Ensure codes DEMO-00001..count exist, returning newly inserted rows only.
+
+    One transaction couples each employee with its initial audit event. A fixed
+    baseline date and arithmetic variation make repeated runs reproducible,
+    without random-number seeds, network calls or identifying information.
+    """
     if not 1 <= count <= 100000:
         raise ValueError("Count must be between 1 and 100,000")
     initialize(path)
     added = 0
-    with connect(path) as db:
+    with closing(connect(path)) as db, db:
         for i in range(1, count + 1):
+            # Cycle country/currency fastest and department every five records,
+            # distributing the baseline across all location/department pairs.
             country, currency, base = LOCATIONS[(i - 1) % len(LOCATIONS)]
             department, title = DEPARTMENTS[((i - 1) // 5) % len(DEPARTMENTS)]
             amount = base + ((i * 7919) % max(1, base // 2))
@@ -48,6 +64,8 @@ def seed(path: str, count: int = 10000) -> int:
                 ),
             )
             if cursor.rowcount:
+                # INSERT OR IGNORE reports zero for existing employee codes;
+                # create history only for genuinely new rows to stay idempotent.
                 added += 1
                 db.execute(
                     """INSERT INTO salary_history
@@ -67,6 +85,8 @@ def seed(path: str, count: int = 10000) -> int:
 
 
 if __name__ == "__main__":
+    # SALARY_DB keeps startup seeding and the API pointed at the same persisted
+    # file; an explicit --database takes precedence for test/reset preparation.
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--database",

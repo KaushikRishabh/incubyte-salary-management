@@ -1,3 +1,4 @@
+# Shared Python quality checks: conservative correctness/import rules, not runtime behavior.
 [tool.ruff]
 target-version = "py312"
 line-length = 100
@@ -8,6 +9,7 @@ select = ["E4", "E7", "E9", "F", "I", "B"]
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
+# Measure application statements and branches, including unexecuted paths.
 [tool.coverage.run]
 source = ["app"]
 branch = true
