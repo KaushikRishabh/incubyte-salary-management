@@ -24,3 +24,6 @@ Use SQLite for a small single-service demo, integer minor units for money, separ
 - Independent review instruction: exercise monetary boundaries, malformed requests, CSV atomicity, concurrent writes and input/resource limits; report reproducible defects rather than just style changes.
 - Review found malformed CSV headers, SQLite integer overflows and a streamed body-limit bypass. Regression tests accompanied fixes. Browser integration then found a worker-thread lifecycle bug, which was fixed and retested rather than hidden.
 - Exact final executed checks and limitations are in verification.md. No personal candidate review, remote deployment or final submission has been claimed.
+
+## Post-delivery readiness hardening
+After the first local artifact, added opt-in public-demo caps/throttles and a non-destructive operator reset preparer. The Dockerfile defaults to bounded mode. Added eight deterministic backend regressions and requested an independent adversarial review. This is a real subsequent increment, not a claim those safeguards existed in the earlier package. No deployment authorization was inferred.

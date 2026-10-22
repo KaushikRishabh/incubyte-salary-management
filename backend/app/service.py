@@ -148,7 +148,7 @@ def change_status(db, identifier, change, target):
     return serialize(row)
 
 
-def import_csv(db, content):
+def import_csv(db, content, capacity=None):
     reader = csv.DictReader(io.StringIO(content.lstrip("\ufeff")), strict=True)
     try:
         if reader.fieldnames != FIELDS:
@@ -177,6 +177,10 @@ def import_csv(db, content):
         raise HTTPException(422, "Malformed CSV") from None
     if not rows:
         raise HTTPException(422, "CSV contains no employee rows")
+    if capacity is not None and len(rows) > capacity:
+        raise HTTPException(
+            507, "Synthetic demo capacity reached. The operator must reset the demo."
+        )
     for data in rows:
         create_employee(db, data)
     return len(rows)

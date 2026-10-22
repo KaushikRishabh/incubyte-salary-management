@@ -101,3 +101,5 @@ The assistant generated and checked this implementation. The candidate must revi
 - `docs/release-checklist.md`: remaining deployment and submission gates.
 
 The delivery ZIP also contains a Git bundle preserving actual incremental commits and a labelled screenshot-walkthrough MP4. No real employee database is included; run the seed script.
+
+For any future public demo, enable `SALARY_DEMO_MODE=1` and follow [the bounded-demo deployment and reset guide](docs/public-demo.md). Docker enables these caps by default; local development does not. No public launch is authorized by this configuration.
