@@ -3,9 +3,10 @@
 import os
 import sqlite3
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Path as ApiPath
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
@@ -103,7 +104,7 @@ def create_app(database_path=None):
 
     @app.get("/api/employees")
     def employees(
-        page: int = Query(1, ge=1),
+        page: int = Query(1, ge=1, le=1_000_000),
         page_size: int = Query(25, ge=1, le=100),
         parameters=Depends(query_filters),
         db=Depends(database, scope="function"),
@@ -129,22 +130,37 @@ def create_app(database_path=None):
         return service.create_employee(db, body)
 
     @app.put("/api/employees/{identifier}")
-    def update(identifier: int, body: EmployeeUpdate, db=Depends(database, scope="function")):
+    def update(
+        identifier: Annotated[int, ApiPath(ge=1, le=9_223_372_036_854_775_807)],
+        body: EmployeeUpdate,
+        db=Depends(database, scope="function"),
+    ):
         db.execute("BEGIN IMMEDIATE")
         return service.update_employee(db, identifier, body)
 
     @app.post("/api/employees/{identifier}/archive")
-    def archive(identifier: int, body: StatusChange, db=Depends(database, scope="function")):
+    def archive(
+        identifier: Annotated[int, ApiPath(ge=1, le=9_223_372_036_854_775_807)],
+        body: StatusChange,
+        db=Depends(database, scope="function"),
+    ):
         db.execute("BEGIN IMMEDIATE")
         return service.change_status(db, identifier, body, "archived")
 
     @app.post("/api/employees/{identifier}/restore")
-    def restore(identifier: int, body: StatusChange, db=Depends(database, scope="function")):
+    def restore(
+        identifier: Annotated[int, ApiPath(ge=1, le=9_223_372_036_854_775_807)],
+        body: StatusChange,
+        db=Depends(database, scope="function"),
+    ):
         db.execute("BEGIN IMMEDIATE")
         return service.change_status(db, identifier, body, "active")
 
     @app.get("/api/employees/{identifier}/history")
-    def history(identifier: int, db=Depends(database, scope="function")):
+    def history(
+        identifier: Annotated[int, ApiPath(ge=1, le=9_223_372_036_854_775_807)],
+        db=Depends(database, scope="function"),
+    ):
         service.get_employee(db, identifier)
         rows = db.execute(
             "SELECT * FROM salary_history WHERE employee_id=? ORDER BY id DESC", (identifier,)

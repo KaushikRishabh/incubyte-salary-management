@@ -307,6 +307,19 @@ class APITests(unittest.TestCase):
         with connect(self.path) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM salary_history").fetchone()[0], 10000)
 
+    def test_malformed_csv_header_is_client_error(self):
+        for content in ['"employee_code,name\nanything', "x" * 131073]:
+            response = self.client.post("/api/employees/import", json={"csv": content})
+            self.assertEqual(response.status_code, 422, response.text)
+
+    def test_out_of_range_identifiers_and_pages(self):
+        for url in [
+            "/api/employees?page=9223372036854775808",
+            "/api/employees/9223372036854775808/history",
+            "/api/employees/-1/history",
+        ]:
+            self.assertEqual(self.client.get(url).status_code, 422)
+
     def test_options_and_health(self):
         self.create()
         self.assertEqual(self.client.get("/api/options").json()["countries"], ["India"])
