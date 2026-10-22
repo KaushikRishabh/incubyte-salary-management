@@ -1,27 +1,31 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { errorText, request } from './api'
+import { ApiError, errorText, request } from './api'
 import { dateText, initials, money } from './format'
 import { Icon } from './Icon'
 import { Modal } from './Modal'
 import type { Employee, HistoryEntry } from './types'
 
+/** Archive/restore is a reversible, versioned write with a mandatory audit reason. */
 export function StatusDialog({
   employee,
   onClose,
   onSaved,
+  onStale,
 }: {
   employee: Employee
   onClose: () => void
   onSaved: (message: string) => void
+  onStale: () => void
 }) {
   const restoring = employee.status === 'archived'
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [stale, setStale] = useState(false)
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (busy) return
+    if (busy || stale) return
     setBusy(true)
     setError('')
     try {
@@ -37,6 +41,12 @@ export function StatusDialog({
       )
     } catch (failure) {
       setError(errorText(failure))
+      // Refresh the parent snapshot on conflict, but keep the reason visible for recovery.
+      // Merely closing/reopening without refreshing would repeatedly submit the old version.
+      if (failure instanceof ApiError && failure.status === 409) {
+        setStale(true)
+        onStale()
+      }
     } finally {
       setBusy(false)
     }
@@ -66,6 +76,12 @@ export function StatusDialog({
           {error && (
             <div className="alert error" role="alert">
               {error}
+              {stale && (
+                <p>
+                  Close this dialog and reopen the latest record before trying
+                  again. This change was not saved.
+                </p>
+              )}
             </div>
           )}
           <label>
@@ -81,6 +97,7 @@ export function StatusDialog({
                   ? 'e.g. Rejoined the company'
                   : 'e.g. Employment ended'
               }
+              disabled={busy}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
@@ -103,7 +120,7 @@ export function StatusDialog({
             <button
               type="submit"
               className={`button ${restoring ? 'primary' : 'danger'}`}
-              disabled={busy}
+              disabled={busy || stale}
             >
               {busy
                 ? 'Saving…'
@@ -118,6 +135,7 @@ export function StatusDialog({
   )
 }
 
+/** Fetch the audit trail on each open. Retrying replaces this read, never writes history. */
 export function HistoryDialog({
   employee,
   onClose,
@@ -130,6 +148,7 @@ export function HistoryDialog({
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
   useEffect(() => {
+    // Closing, selecting another employee, or retrying invalidates the previous read.
     const controller = new AbortController()
     setLoading(true)
     setError('')
@@ -137,7 +156,9 @@ export function HistoryDialog({
       `/api/employees/${employee.id}/history`,
       { signal: controller.signal },
     )
-      .then((data) => setItems(data.items))
+      .then((data) => {
+        if (!controller.signal.aborted) setItems(data.items)
+      })
       .catch((failure) => {
         if (!controller.signal.aborted) setError(errorText(failure))
       })
@@ -187,6 +208,8 @@ export function HistoryDialog({
           </div>
         ) : (
           <ol className="timeline">
+            {/* The API returns newest first. Preserve each event's currencies rather than
+                applying the employee's current currency to historical amounts. */}
             {items.map((entry, index) => (
               <li key={entry.id}>
                 <div className="timeline-marker">
@@ -237,6 +260,7 @@ export function HistoryDialog({
     </Modal>
   )
 }
+/** Friendly labels tolerate legacy event spellings and readable future event names. */
 function eventName(event: string) {
   return (
     (

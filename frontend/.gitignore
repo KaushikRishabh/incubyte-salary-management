@@ -1,2 +1,3 @@
+# Incremental compiler caches and test output are generated, not reviewable source.
 *.tsbuildinfo
 coverage/

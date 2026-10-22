@@ -1,4 +1,11 @@
-"""Transactional application operations, shared by HTTP endpoints and tests."""
+"""Business operations over validated inputs and caller-owned SQLite connections.
+
+Functions never commit: the HTTP dependency owns commit/rollback. Before any
+write, callers must start BEGIN IMMEDIATE so version/capacity checks and resulting
+writes share a serialized transaction. Every successful mutation adds an audit
+event atomically; exceptions leave rollback to the caller. Read helpers accept
+the same connection without requiring a writer transaction.
+"""
 
 import csv
 import io
@@ -10,6 +17,8 @@ from pydantic import ValidationError
 
 from .domain import CURRENCY_DECIMALS, EmployeeInput, minor_units, money
 
+# Ordered, create-only import contract. Export deliberately omits reason and adds
+# status/version, so a report cannot accidentally be re-imported as new employees.
 FIELDS = [
     "employee_code",
     "name",
@@ -24,12 +33,18 @@ FIELDS = [
 
 
 def serialize(row):
+    """Copy a DB row to a JSON-ready mapping without exposing internal money units."""
     data = dict(row)
     data["annual_salary"] = money(data.pop("salary_minor"), data["currency"])
     return data
 
 
 def filters(q="", country="", department="", currency="", status="active"):
+    """Return (SQL WHERE fragment, bound values) shared by all reporting endpoints.
+
+    Column names come only from this function; caller-provided values are never
+    interpolated into SQL. HTTP validation supplies the supported status values.
+    """
     clauses, values = [], []
     if status != "all":
         clauses.append("status = ?")
@@ -47,6 +62,7 @@ def filters(q="", country="", department="", currency="", status="active"):
 
 
 def get_employee(db, identifier):
+    """Fetch active or archived state by primary key, or raise the public 404."""
     row = db.execute("SELECT * FROM employees WHERE id=?", (identifier,)).fetchone()
     if row is None:
         raise HTTPException(404, "Employee not found")
@@ -54,6 +70,7 @@ def get_employee(db, identifier):
 
 
 def amount_for(data):
+    """Bridge currency-aware money validation to a consistent HTTP 422 response."""
     try:
         return minor_units(data.annual_salary, data.currency)
     except ValueError as error:
@@ -61,6 +78,12 @@ def amount_for(data):
 
 
 def record(db, identifier, old, new, event, reason):
+    """Append one audit row in the caller's transaction, without committing it.
+
+    Creation supplies old=None. Archive/restore retain the current salary/date
+    and explain the status event; changed_at records when the event was written.
+    This is a salary/event audit, not a before/after snapshot of every profile field.
+    """
     db.execute(
         """INSERT INTO salary_history
         (employee_id,old_salary_minor,new_salary_minor,old_currency,new_currency,effective_date,reason,event)
@@ -79,6 +102,11 @@ def record(db, identifier, old, new, event, reason):
 
 
 def create_employee(db, data):
+    """Insert validated employee state and initial history, returning public fields.
+
+    Input validation covers the other schema constraints; the unique employee
+    code is the expected integrity conflict and is exposed as HTTP 409.
+    """
     units = amount_for(data)
     try:
         cursor = db.execute(
@@ -104,6 +132,12 @@ def create_employee(db, data):
 
 
 def update_employee(db, identifier, data):
+    """Replace editable fields, increment the version and record both salary values.
+
+    The writer reservation protects the read/check/write sequence; the WHERE
+    version predicate additionally states its optimistic-concurrency invariant.
+    Employee identity is immutable and effective dates may stay equal or advance.
+    """
     old = get_employee(db, identifier)
     if old["version"] != data.version:
         raise HTTPException(409, "This employee changed. Refresh before editing again.")
@@ -135,6 +169,11 @@ def update_employee(db, identifier, data):
 
 
 def change_status(db, identifier, change, target):
+    """Archive/restore with optimistic locking, rejecting duplicate transitions.
+
+    Only the fixed API routes provide target ('active' or 'archived'); it is not
+    accepted as arbitrary client input. A status change does not rewrite salary.
+    """
     old = get_employee(db, identifier)
     if old["version"] != change.version:
         raise HTTPException(409, "This employee changed. Refresh before trying again.")
@@ -149,6 +188,13 @@ def change_status(db, identifier, change, target):
 
 
 def import_csv(db, content, capacity=None):
+    """Validate the entire create-only CSV, then insert all rows transactionally.
+
+    Accept an optional UTF-8 BOM but require the exact header/order. Two-phase
+    parsing avoids writes for shape/validation errors. Database conflicts can
+    still occur during insertion; the caller must roll back the whole batch.
+    capacity is the number of additional employee/history pairs the demo allows.
+    """
     reader = csv.DictReader(io.StringIO(content.lstrip("\ufeff")), strict=True)
     try:
         if reader.fieldnames != FIELDS:
@@ -157,6 +203,8 @@ def import_csv(db, content, capacity=None):
         raise HTTPException(422, "Malformed CSV header") from None
     rows, seen = [], set()
     try:
+        # Record numbering starts after the header; quoted multiline fields make
+        # this a logical record number rather than a physical source-line number.
         for index, row in enumerate(reader, 2):
             if len(rows) >= 10000:
                 raise HTTPException(422, "Import is limited to 10,000 employees")
@@ -187,11 +235,17 @@ def import_csv(db, content, capacity=None):
 
 
 def csv_safe(value):
+    """Prefix formula-like cells so opening a report does not execute a formula.
+
+    The leading apostrophe intentionally changes exported report text. Check
+    through whitespace too, because spreadsheet applications may ignore it.
+    """
     text = str(value)
     return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
 
 
 def export_csv(rows):
+    """Serialize filtered DB rows as a human-readable, formula-escaped CSV string."""
     out = io.StringIO(newline="")
     writer = csv.writer(out)
     # Export is a human report, not the create-only import format.
@@ -203,6 +257,13 @@ def export_csv(rows):
 
 
 def analytics(db, where, args, group_by):
+    """Return per-currency aggregates and total headcount for a trusted filter.
+
+    Dimension identifiers are chosen from a fixed mapping, never raw SQL input.
+    SQLite sums integer minor units; Decimal calculates the average, rounding
+    half up only for display. Even country/department groups retain currency as
+    a second key because this demo has no exchange-rate or conversion model.
+    """
     dimension = {"currency": "currency", "country": "country", "department": "department"}[group_by]
     rows = db.execute(
         f"""SELECT {dimension} AS label,currency,COUNT(*) AS n,

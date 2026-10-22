@@ -5,8 +5,10 @@ import { Icon } from './Icon'
 import { Modal } from './Modal'
 import { today } from './format'
 
+/** Import is create-only. Its ordered columns intentionally differ from the reporting export. */
 export const CSV_HEADERS =
   'employee_code,name,department,job_title,country,currency,annual_salary,effective_date,reason'
+/** Generate the small example locally; no employee data or download request is involved. */
 function downloadTemplate() {
   const blob = new Blob(
     [
@@ -19,8 +21,12 @@ function downloadTemplate() {
   link.href = url
   link.download = 'acme-employee-import-template.csv'
   link.click()
+  // Allow the browser to start downloading before releasing the temporary object URL.
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
+/** Keep CSV text editable after rejection. The server validates every row and commits
+ * all employees/history together, so the browser never implements partial success.
+ */
 export function ImportDialog({
   onClose,
   onSaved,
@@ -32,6 +38,7 @@ export function ImportDialog({
   const [filename, setFilename] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // File reading and network submission are separate pending states; both lock dismissal.
   const [reading, setReading] = useState(false)
   async function loadFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -39,6 +46,8 @@ export function ImportDialog({
     setError('')
     setCsv('')
     setFilename('')
+    // The browser deliberately uses a stricter 2 MiB limit than the API's request cap.
+    // This bounds the editable preview and JSON encoding overhead on slower devices.
     if (file.size > 2 * 1024 * 1024) {
       setError(
         'Use a CSV file smaller than 2 MB. Split larger imports into smaller files.',
@@ -62,6 +71,7 @@ export function ImportDialog({
     setBusy(true)
     setError('')
     try {
+      // Send text, not a multipart upload. Server-side parsing is the source of validation truth.
       const result = await request<{ created: number }>(
         '/api/employees/import',
         { method: 'POST', body: JSON.stringify({ csv }) },
@@ -128,6 +138,7 @@ export function ImportDialog({
               {reading ? 'Reading file…' : filename || 'Select a CSV file'}
             </strong>
             <span>Choose a file from your computer</span>
+            {/* A real file input remains keyboard-accessible inside the styled label. */}
             <input
               aria-label="CSV file"
               type="file"

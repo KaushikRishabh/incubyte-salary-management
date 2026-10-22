@@ -35,3 +35,23 @@ If the environment's default npm cache is not writable, use `npm ci --cache /tmp
 ## Tests
 
 The UI tests use a mocked API to cover currency separation, server-side search and pagination, salary edits, immutable IDs, duplicate-create recovery, stale-edit rejection, JPY validation, archive/restore, repeated history opens, atomic CSV error feedback, grouped analytics, network retry and canceled forms/focus return. Format tests cover decimal display, dates, currency labels and API error messages. Integrated real-browser checks are documented in the repository-level verification notes.
+
+## Reading the implementation
+
+Inline comments focus on contracts and decisions rather than narrating each JSX tag:
+
+- `src/main.tsx` mounts React; `App.tsx` owns filters, pagination, read requests, dialog selection, and refresh invalidation. A revision counter re-fetches dependent views after a successful write.
+- `src/types.ts` describes the API's JSON shapes. `api.ts` normalizes HTTP/network errors and preserves HTTP status for conflict handling. TypeScript types document responses; they do not perform runtime JSON schema validation.
+- `src/EmployeeForm.tsx` owns a create/edit draft. Salary inputs stay strings; basic browser/client validation improves feedback, while the API remains authoritative. A version conflict preserves the draft and forces reopening the refreshed record.
+- `src/EmployeeActions.tsx` handles reversible archive/restore and read-only history. A stale status change also refreshes the directory before retrying from a newly opened dialog.
+- `src/Modal.tsx` supplies the native dialog wrapper, accessible naming, dismissal rules, and focus restoration. Pending writes lock both dismissal and editable controls.
+- `src/ImportDialog.tsx` creates a local CSV template, reads a file or pasted text, and submits one atomic create-only import. The browser intentionally caps previews at 2 MiB, below the API's larger request cap.
+- `src/format.ts` preserves exact full-money display using string manipulation. Only abbreviated overview labels use approximate numbers. Date-only values are not treated as UTC instants.
+- `src/Icon.tsx` contains decorative inline SVG shapes. `src/styles.css` is organized into commented component/layout sections, responsive breakpoints, and final readability overrides.
+- `src/test/` exercises observable UI behavior with mocked requests. It is not a substitute for a real-browser check of layout, native dialog focus trapping, or downloads.
+
+### Configuration that must remain strict JSON
+
+`package.json` cannot contain comments. Its scripts run the loopback-only Vite development/preview servers, a TypeScript-checked production build, Vitest, and Prettier. React/React DOM are runtime dependencies; TypeScript, Vite, Vitest, Testing Library, jsdom, and Prettier are development tools. The project is private to prevent accidental npm publication. `package-lock.json` is generated and records reproducible dependency resolution; it is not manually annotated.
+
+`.prettierrc.json` configures single quotes, omitted semicolons, and trailing commas. The TypeScript project files accept JSON-with-comments, so their build boundaries and strictness settings are explained inline. `vite.config.ts` documents the development API proxy and shared test setup. Generated `dist/`, `node_modules/`, compiler caches, and coverage outputs are not authored source and should not be hand-commented.

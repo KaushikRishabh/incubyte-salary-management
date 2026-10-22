@@ -1,3 +1,4 @@
+# Keep generated dependencies, local databases, secrets and coverage out of source history.
 __pycache__/
 *.pyc
 .venv/

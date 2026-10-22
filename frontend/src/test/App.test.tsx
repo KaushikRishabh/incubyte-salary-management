@@ -1,9 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../App'
 import type { Employee } from '../types'
 
+// Synthetic records deliberately span currencies and carry non-initial versions.
+// Assertions should inspect outgoing decimal strings, not just what appears on screen.
 const alex: Employee = {
   id: 1,
   employee_code: 'ACME-00001',
@@ -62,6 +71,8 @@ let total = 2
 let fetchMock: ReturnType<typeof vi.fn>
 let historyCalls = 0
 
+// Route a small deterministic API in memory. Individual failure/race tests override
+// only the affected endpoint, keeping unrelated panels realistic and independent.
 beforeEach(() => {
   mutationStatus = 200
   mutationError = ''
@@ -121,6 +132,7 @@ beforeEach(() => {
   })
   vi.stubGlobal('fetch', fetchMock)
 })
+// Wait for an actual data row before interacting, not an arbitrary timing delay.
 const load = async () => {
   render(<App />)
   await screen.findByRole('button', { name: 'Alex Morgan' })
@@ -131,6 +143,7 @@ const mutation = (path: string) =>
     ([url, init]) => String(url) === path && init?.method,
   )
 
+// Test through accessible roles/labels, exercising user-visible contracts rather than component internals.
 describe('employee workspace', () => {
   it('shows synthetic-data restrictions and currency-separated salary metrics', async () => {
     await load()
@@ -434,5 +447,260 @@ describe('employee workspace', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(mutation('/api/employees')).toBeUndefined()
     expect(screen.getByRole('button', { name: 'Add employee' })).toHaveFocus()
+  })
+})
+
+/** Deferred promises make in-flight states deterministic instead of relying on slow timers. */
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
+describe('interrupted and recovery flows', () => {
+  it.each(['active', 'archived'] as const)(
+    'refreshes a stale %s status change and reopens with the latest version',
+    async (status) => {
+      const usual = fetchMock.getMockImplementation()!
+      let version = 3
+      fetchMock.mockImplementation(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          const path = String(input)
+          if (init?.method === 'POST' && /\/(archive|restore)$/.test(path)) {
+            if (version === 3) {
+              version = 4
+              return json(
+                { detail: 'This record has changed. Refresh and try again.' },
+                409,
+              )
+            }
+            return json({ ...alex, version: 5 })
+          }
+          if (path.startsWith('/api/employees?')) {
+            return json({
+              items: [{ ...alex, status, version }],
+              total: 1,
+              page: 1,
+              page_size: 25,
+            })
+          }
+          return usual(input, init)
+        },
+      )
+      const user = await load()
+      const action = status === 'active' ? 'Archive' : 'Restore'
+      const reasonLabel =
+        status === 'active' ? 'Reason for archiving' : 'Reason for restoring'
+      await user.click(
+        screen.getByRole('button', { name: `${action} Alex Morgan` }),
+      )
+      await user.type(
+        screen.getByLabelText(reasonLabel),
+        'Verified status change',
+      )
+      await user.click(
+        screen.getByRole('button', { name: `${action} employee` }),
+      )
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'This change was not saved',
+      )
+      expect(
+        screen.getByRole('button', { name: `${action} employee` }),
+      ).toBeDisabled()
+      expect(screen.getByLabelText(reasonLabel)).toHaveValue(
+        'Verified status change',
+      )
+      // This immediate mocked refresh can preserve the row; focus returns to its opener.
+      await screen.findByRole('button', { name: `${action} Alex Morgan` })
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(
+        screen.getByRole('button', { name: `${action} Alex Morgan` }),
+      ).toHaveFocus()
+      await user.click(
+        screen.getByRole('button', { name: `${action} Alex Morgan` }),
+      )
+      await user.type(
+        screen.getByLabelText(reasonLabel),
+        'Verified status change',
+      )
+      await user.click(
+        screen.getByRole('button', { name: `${action} employee` }),
+      )
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+      )
+      const writes = fetchMock.mock.calls.filter(
+        ([url, init]) =>
+          /\/(archive|restore)$/.test(String(url)) && init?.method === 'POST',
+      )
+      expect(writes).toHaveLength(2)
+      expect(JSON.parse(writes[1][1].body).version).toBe(4)
+    },
+  )
+
+  it('locks an in-flight draft and all dismissal routes, then allows recovery after failure', async () => {
+    const usual = fetchMock.getMockImplementation()!
+    const pending = deferred<Response>()
+    fetchMock.mockImplementation(
+      (input: RequestInfo | URL, init?: RequestInit) => {
+        return init?.method === 'PUT' ? pending.promise : usual(input, init)
+      },
+    )
+    const user = await load()
+    await user.click(screen.getByRole('button', { name: 'Edit Alex Morgan' }))
+    await user.type(
+      screen.getByLabelText('Reason for change'),
+      'Pending salary review',
+    )
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    const dialog = screen.getByRole('dialog')
+    expect(screen.getByLabelText(/Annual amount/)).toBeDisabled()
+    expect(screen.getByLabelText('Reason for change')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Close dialog' })).toBeDisabled()
+    fireEvent(dialog, new Event('cancel', { cancelable: true }))
+    fireEvent.click(dialog, { clientX: -10, clientY: -10 })
+    expect(dialog).toBeInTheDocument()
+    // Repeated submits do not start a second write while the first outcome is unknown.
+    fireEvent.submit(dialog.querySelector('form')!)
+    expect(
+      fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT'),
+    ).toHaveLength(1)
+    await act(async () =>
+      pending.resolve(json({ detail: 'Temporary server problem' }, 503)),
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Temporary server problem',
+    )
+    expect(screen.getByLabelText(/Annual amount/)).toBeEnabled()
+    expect(screen.getByLabelText('Reason for change')).toHaveValue(
+      'Pending salary review',
+    )
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('ignores old list and summary JSON that finishes parsing after filters change', async () => {
+    const user = await load()
+    const usual = fetchMock.getMockImplementation()!
+    const oldList = deferred<unknown>()
+    const oldSummary = deferred<unknown>()
+    const canceledSignals: AbortSignal[] = []
+    fetchMock.mockImplementation(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input), 'http://localhost')
+        if (url.searchParams.get('currency') === 'USD') {
+          canceledSignals.push(init!.signal as AbortSignal)
+          // Simulate headers already received: canceling fetch alone cannot undo queued parsing.
+          const body = url.pathname === '/api/employees' ? oldList : oldSummary
+          return { ok: true, json: () => body.promise }
+        }
+        if (url.searchParams.get('currency') === 'EUR') {
+          return url.pathname === '/api/employees'
+            ? json({
+                items: [{ ...alex, name: 'Newest result' }],
+                total: 1,
+                page: 1,
+                page_size: 25,
+              })
+            : json({
+                groups: [{ ...groups[0], group: 'EUR', currency: 'EUR' }],
+                headcount: 1,
+              })
+        }
+        return usual(input, init)
+      },
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Currency' }),
+      'USD',
+    )
+    await waitFor(() => expect(canceledSignals).toHaveLength(2))
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Currency' }),
+      'EUR',
+    )
+    await screen.findByRole('button', { name: 'Newest result' })
+    expect(canceledSignals.every((signal) => signal.aborted)).toBe(true)
+    await act(async () => {
+      oldList.resolve({
+        items: [{ ...alex, name: 'Stale result' }],
+        total: 1,
+        page: 1,
+        page_size: 25,
+      })
+      oldSummary.resolve({ groups, headcount: 2 })
+    })
+    expect(
+      screen.getByRole('button', { name: 'Newest result' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Stale result' }),
+    ).not.toBeInTheDocument()
+    const overview = screen.getByRole('region', { name: 'Salary overview' })
+    expect(within(overview).getAllByText('EUR')).toHaveLength(2)
+    expect(within(overview).queryByText('INR')).not.toBeInTheDocument()
+  })
+
+  it('does not export the old query while search is still debouncing', async () => {
+    const user = await load()
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search employees' }),
+      'Alex',
+    )
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Export CSV' })).toBeEnabled(),
+    )
+  })
+
+  it('rejects oversized files before upload and permits selecting a valid file afterward', async () => {
+    const user = await load()
+    await user.click(screen.getByRole('button', { name: 'Import CSV' }))
+    const oversized = new File(
+      ['x'.repeat(2 * 1024 * 1024 + 1)],
+      'oversized.csv',
+      { type: 'text/csv' },
+    )
+    await user.upload(screen.getByLabelText('CSV file'), oversized)
+    expect(screen.getByRole('alert')).toHaveTextContent('smaller than 2 MB')
+    expect(
+      screen.getByRole('button', { name: 'Import employees' }),
+    ).toBeDisabled()
+    expect(mutation('/api/employees/import')).toBeUndefined()
+    const csv =
+      'employee_code,name,department,job_title,country,currency,annual_salary,effective_date,reason\nDEMO,Demo,Engineering,Engineer,India,INR,85000,2026-01-01,Initial import'
+    const valid = new File([csv], 'valid.csv', { type: 'text/csv' })
+    // File.text is a browser API absent from this jsdom File implementation.
+    Object.defineProperty(valid, 'text', { value: () => Promise.resolve(csv) })
+    await user.upload(screen.getByLabelText('CSV file'), valid)
+    await waitFor(() =>
+      expect(screen.getByLabelText('CSV contents')).toHaveValue(csv),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Import employees' }),
+    ).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Import employees' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    expect(JSON.parse(mutation('/api/employees/import')![1].body)).toEqual({
+      csv,
+    })
+  })
+
+  it('closes an idle modal via Escape/cancel and returns focus to its opener', async () => {
+    const user = await load()
+    const opener = screen.getByRole('button', { name: 'Add employee' })
+    await user.click(opener)
+    fireEvent(
+      screen.getByRole('dialog'),
+      new Event('cancel', { cancelable: true }),
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(opener).toHaveFocus()
   })
 })

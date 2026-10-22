@@ -1,3 +1,10 @@
+"""Synthetic-demo safety tests using tiny capacities and a controllable clock.
+
+The goal is boundary/atomicity behavior, not proving a denial-of-service defense.
+Concurrent requests exercise SQLite writer serialization; reset tests use only
+temporary paths and verify that preexisting database bytes stay unchanged.
+"""
+
 import asyncio
 import csv
 import io
@@ -5,6 +12,7 @@ import os
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,17 +26,23 @@ from test_salary import employee
 
 
 class DemoTests(unittest.TestCase):
+    """Opt-in demo limits, concurrency, restart behavior and non-destructive reset safety."""
+
     def setUp(self):
+        """Give each test its own disk database, preserving production data and test isolation."""
         self.temp = tempfile.TemporaryDirectory()
         self.path = str(Path(self.temp.name) / "demo.sqlite3")
 
     def tearDown(self):
+        """Release test clients and temporary files after each independent scenario."""
         self.temp.cleanup()
 
     def client(self, **limits):
+        """Use tiny injectable budgets to exercise capacity boundaries without huge fixtures."""
         return TestClient(create_app(self.path, demo_limits=DemoLimits(**limits)))
 
     def test_employee_cap_serializes_concurrent_creates(self):
+        """Writer reservations prevent concurrent checks from spending the same capacity twice."""
         with self.client(employees=2) as client:
             with ThreadPoolExecutor(max_workers=8) as pool:
                 codes = list(
@@ -46,6 +60,7 @@ class DemoTests(unittest.TestCase):
             self.assertEqual(client.get("/api/employees").json()["total"], 2)
 
     def test_history_cap_blocks_edits_and_status_atomically(self):
+        """All mutation routes share the history budget and leave state unchanged on rejection."""
         with self.client(history=2) as client:
             record = client.post("/api/employees", json=employee()).json()
             self.assertEqual(
@@ -70,6 +85,7 @@ class DemoTests(unittest.TestCase):
             self.assertEqual(len(client.get("/api/employees/1/history").json()["items"]), 2)
 
     def test_import_over_cap_has_no_partial_records(self):
+        """Capacity is reserved for a whole batch, never only the first rows that fit."""
         out = io.StringIO()
         writer = csv.DictWriter(out, fieldnames=FIELDS)
         writer.writeheader()
@@ -81,6 +97,7 @@ class DemoTests(unittest.TestCase):
             self.assertEqual(client.get("/api/employees").json()["total"], 0)
 
     def test_throttle_counts_invalid_attempts_but_reads_work(self):
+        """Rejected/unknown writes consume budget; spoofed IP headers cannot bypass it."""
         with self.client(writes=2) as client:
             self.assertEqual(client.post("/api/employees", json={}).status_code, 422)
             self.assertEqual(client.post("/unknown").status_code, 404)
@@ -92,6 +109,7 @@ class DemoTests(unittest.TestCase):
             self.assertEqual(client.get("/api/health").status_code, 200)
 
     def test_throttle_window_recovers_without_sleep_and_memory_is_bounded(self):
+        """A fake clock verifies exact expiry and that denied attempts do not grow the queue."""
         now = [0]
         statuses = []
 
@@ -120,6 +138,7 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(statuses[-1], 204)
 
     def test_restart_does_not_reset_persisted_capacity(self):
+        """Restarting clears a process throttle but must not reclaim stored row capacity."""
         with self.client(employees=1) as client:
             client.post("/api/employees", json=employee())
         with self.client(employees=1) as client:
@@ -128,6 +147,7 @@ class DemoTests(unittest.TestCase):
             )
 
     def test_normal_mode_preserved_and_configuration_validated(self):
+        """Local mode remains uncapped; invalid opt-in settings fail explicitly."""
         with patch.dict(os.environ, {"SALARY_DEMO_MODE": "0"}):
             self.assertIsNone(configured_limits())
             with TestClient(create_app(self.path)) as client:
@@ -140,6 +160,7 @@ class DemoTests(unittest.TestCase):
             DemoLimits(writes=0)
 
     def test_reset_creates_baseline_without_overwriting_backup(self):
+        """Reset preparation is opt-in, fresh-path only and preserves existing backup bytes."""
         old = Path(self.temp.name) / "old.sqlite3"
         old.write_bytes(b"unchanged backup")
         new = Path(self.temp.name) / "new.sqlite3"
@@ -152,6 +173,6 @@ class DemoTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 prepare_reset(new)
         self.assertEqual(old.read_bytes(), b"unchanged backup")
-        with connect(str(new)) as db:
+        with closing(connect(str(new))) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM employees").fetchone()[0], 10000)
             self.assertEqual(db.execute("SELECT COUNT(*) FROM salary_history").fetchone()[0], 10000)

@@ -1,8 +1,18 @@
-"""Small explicit relational schema and connection lifecycle."""
+"""SQLite schema and low-level connection ownership, without hidden ORM behavior.
+
+The employee row is the current state; salary_history is an append-only audit
+trail maintained by service operations in the same transaction. Archive is a
+status change, never a delete. Schema version 1 is a baseline, not a migration
+framework; future schema changes need an explicit migration strategy.
+"""
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
+# Monetary columns contain integer minor units (e.g., cents or yen), not floats.
+# NOCASE matches the ASCII-only employee-code validator. Indexes support the
+# common active/filter, alphabetic page and newest-history access patterns.
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS employees (
  id INTEGER PRIMARY KEY,
@@ -29,6 +39,12 @@ PRAGMA user_version = 1;
 
 
 def connect(path: str) -> sqlite3.Connection:
+    """Open a row-addressable connection; the caller must commit/rollback and close.
+
+    Foreign keys and lock-wait bounds are per connection, so set them every time.
+    The 10-second busy timeout lets brief competing writes finish before callers
+    receive an OperationalError, mapped to HTTP 503 at the API boundary.
+    """
     # FastAPI may resume a synchronous dependency on a different worker thread.
     # Each request owns this connection; it is never shared between requests.
     connection = sqlite3.connect(path, timeout=10, check_same_thread=False)
@@ -39,7 +55,12 @@ def connect(path: str) -> sqlite3.Connection:
 
 
 def initialize(path: str) -> None:
+    """Create missing parent directories/schema and enable concurrent WAL readers.
+
+    SQLite's connection context controls transactions, not resource lifetime;
+    closing explicitly releases the file handle even if schema creation fails.
+    """
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    with connect(path) as connection:
+    with closing(connect(path)) as connection, connection:
         connection.execute("PRAGMA journal_mode=WAL")
         connection.executescript(SCHEMA)

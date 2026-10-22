@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+// Local SVG shapes avoid external icon/font requests; keys constrain the component's name prop.
 const paths = {
   people: (
     <>
@@ -84,6 +85,9 @@ const paths = {
     </>
   ),
 } as const
+/** Decorative icon only: the surrounding button/text must supply its accessible label.
+ * currentColor inherits interaction/disabled colors; size is in CSS pixels.
+ */
 export function Icon({
   name,
   size = 18,

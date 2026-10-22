@@ -21,6 +21,7 @@ import type {
   SalaryGroup,
 } from './types'
 
+// Shared initial/reset values. The default intentionally excludes archived employees.
 const INITIAL_FILTERS: Filters = {
   q: '',
   country: '',
@@ -28,26 +29,35 @@ const INITIAL_FILTERS: Filters = {
   currency: '',
   status: 'active',
 }
+// Known currencies let the form remain usable while optional filter suggestions load.
 const EMPTY_OPTIONS: Options = {
   countries: [],
   departments: [],
   currencies: ['EUR', 'GBP', 'INR', 'JPY', 'USD'],
 }
+// A discriminated union allows exactly one dialog at a time, with required record data.
 type Dialog =
   | { kind: 'edit'; employee?: Employee }
   | { kind: 'history' | 'status'; employee: Employee }
   | { kind: 'import' }
   | null
 
+/** Application coordinator: owns filters, read models, selection, and notifications.
+ * Dialogs own draft inputs and writes; successful writes increment revision to reload
+ * all dependent server views rather than trying to recompute money in the browser.
+ */
 export default function App() {
   const [view, setView] = useState<'employees' | 'insights'>('employees')
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS)
+  // Search input updates immediately; filters.q changes only after the debounce delay.
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
+  // A shared invalidation counter refreshes records, options, and all salary aggregates.
   const [revision, setRevision] = useState(0)
   const [options, setOptions] = useState<Options>(EMPTY_OPTIONS)
   const [optionsError, setOptionsError] = useState('')
+  // Independent read models/errors let one failed panel recover without hiding the rest.
   const [employees, setEmployees] = useState<EmployeePage | null>(null)
   const [summary, setSummary] = useState<Analytics | null>(null)
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
@@ -62,6 +72,7 @@ export default function App() {
   const [notice, setNotice] = useState('')
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
+  // Serialize once for consistent list/summary/insights/export filtering and stable effect deps.
   const query = useMemo(() => filterParams(filters).toString(), [filters])
   const hasFilters = Boolean(
     filters.q ||
@@ -70,8 +81,10 @@ export default function App() {
     filters.currency ||
     filters.status !== 'active',
   )
+  // During debounce, old rows are hidden and export/pagination cannot use an outdated search.
   const searchPending = search.trim() !== filters.q
 
+  // Cancel the prior timer on every keystroke; changing the query always starts at page one.
   useEffect(() => {
     if (search.trim() === filters.q) return
     const timer = setTimeout(() => {
@@ -80,11 +93,15 @@ export default function App() {
     }, 300)
     return () => clearTimeout(timer)
   }, [search, filters.q])
+  // Each read has its own cancellation scope. Guard success as well as failure so a
+  // response already being parsed cannot overwrite a newer view after cleanup.
   useEffect(() => {
     const controller = new AbortController()
     setOptionsError('')
     request<Options>('/api/options', { signal: controller.signal })
-      .then(setOptions)
+      .then((data) => {
+        if (!controller.signal.aborted) setOptions(data)
+      })
       .catch((error) => {
         if (!controller.signal.aborted) setOptionsError(errorText(error))
       })
@@ -94,11 +111,14 @@ export default function App() {
     const controller = new AbortController()
     setLoading(true)
     setListError('')
+    // Request only one page; the API owns filtering/order and returns the matching total.
     request<EmployeePage>(
       `/api/employees?${query}&page=${page}&page_size=${pageSize}`,
       { signal: controller.signal },
     )
       .then((data) => {
+        if (controller.signal.aborted) return
+        // Archiving the final row can remove the last page. Move to a valid page and refetch.
         const lastPage = Math.max(1, Math.ceil(data.total / pageSize))
         if (page > lastPage) setPage(lastPage)
         else setEmployees(data)
@@ -115,10 +135,13 @@ export default function App() {
     const controller = new AbortController()
     setSummaryLoading(true)
     setSummaryError('')
+    // Overview totals always remain currency-separated, regardless of insight grouping.
     request<Analytics>(`/api/analytics?${query}&group_by=currency`, {
       signal: controller.signal,
     })
-      .then(setSummary)
+      .then((data) => {
+        if (!controller.signal.aborted) setSummary(data)
+      })
       .catch((error) => {
         if (!controller.signal.aborted) setSummaryError(errorText(error))
       })
@@ -128,6 +151,7 @@ export default function App() {
     return () => controller.abort()
   }, [query, revision])
   useEffect(() => {
+    // Avoid an unused detailed-analytics read until the insights panel is visible.
     if (view !== 'insights') return
     const controller = new AbortController()
     setAnalyticsLoading(true)
@@ -135,7 +159,9 @@ export default function App() {
     request<Analytics>(`/api/analytics?${query}&group_by=${groupBy}`, {
       signal: controller.signal,
     })
-      .then(setAnalytics)
+      .then((data) => {
+        if (!controller.signal.aborted) setAnalytics(data)
+      })
       .catch((error) => {
         if (!controller.signal.aborted) setAnalyticsError(errorText(error))
       })
@@ -144,11 +170,13 @@ export default function App() {
       })
     return () => controller.abort()
   }, [query, groupBy, revision, view])
+  // Notifications are polite live regions with a finite lifetime and manual dismissal.
   useEffect(() => {
     if (!notice) return
     const timer = setTimeout(() => setNotice(''), 7000)
     return () => clearTimeout(timer)
   }, [notice])
+  // A later page may not exist for a new filter; reset pagination in the same update.
   function changeFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     setFilters((previous) => ({ ...previous, [key]: value }))
     setPage(1)
@@ -158,6 +186,7 @@ export default function App() {
     setSearch('')
     setPage(1)
   }
+  // Called only after a confirmed API success; failures keep their dialogs and draft text.
   function saved(message: string) {
     setDialog(null)
     setNotice(message)
@@ -166,6 +195,7 @@ export default function App() {
   function refresh() {
     setRevision((value) => value + 1)
   }
+  /** Export all filtered records (not just this page). CSV uses a blob, unlike JSON reads. */
   async function exportCsv() {
     if (exporting) return
     setExporting(true)
@@ -178,12 +208,14 @@ export default function App() {
         } | null
         throw new ApiError(apiErrorMessage(data?.detail), response.status)
       }
+      // The backend sanitizes spreadsheet-formula cells; the browser only downloads bytes.
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       link.download = 'acme-salaries.csv'
       link.click()
+      // Release the temporary download URL after the browser has had time to consume it.
       setTimeout(() => URL.revokeObjectURL(url), 1000)
       setNotice('Your filtered salary report has been exported.')
     } catch (error) {
@@ -199,6 +231,7 @@ export default function App() {
   const count = summaryLoading || summaryError ? null : summary?.headcount
   return (
     <div className="app-shell">
+      {/* Keyboard users can bypass the persistent sidebar; main is programmatically focusable. */}
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
@@ -333,6 +366,7 @@ export default function App() {
               </button>
             </div>
           </section>
+          {/* Loading/error/empty are distinct: never present a failed aggregate as a real zero. */}
           <section className="summary-section" aria-label="Salary overview">
             <div className="section-label-row">
               <h2>
@@ -516,6 +550,8 @@ export default function App() {
                   <LoadingTable />
                 ) : employees?.items.length ? (
                   <div className="table-scroll">
+                    {/* Real table semantics, scoped headers, and named icon buttons keep the
+                        dense directory navigable with assistive technology. */}
                     <table className="employee-table">
                       <caption className="sr-only">
                         Employees matching the current filters. Annual base
@@ -651,6 +687,7 @@ export default function App() {
                     add={() => setDialog({ kind: 'edit' })}
                   />
                 )}
+                {/* Range labels use the server total, not the number of rows rendered locally. */}
                 <div className="pagination">
                   <div className="pagination-description">
                     {!loading && !listError && employees ? (
@@ -828,6 +865,7 @@ export default function App() {
           </button>
         </div>
       )}
+      {/* Conditional mounts discard canceled drafts; only saved() invalidates successful writes. */}
       {dialog?.kind === 'edit' && (
         <EmployeeForm
           employee={dialog.employee}
@@ -842,6 +880,7 @@ export default function App() {
           employee={dialog.employee}
           onClose={() => setDialog(null)}
           onSaved={saved}
+          onStale={refresh}
         />
       )}
       {dialog?.kind === 'history' && (
@@ -857,6 +896,7 @@ export default function App() {
   )
 }
 
+/** Compact summary for exactly one currency; titles expose the full decimal amount. */
 function MetricCard({ group, index }: { group: SalaryGroup; index: number }) {
   return (
     <article className={`metric-card ${index === 0 ? 'featured' : ''}`}>
@@ -887,6 +927,7 @@ function MetricCard({ group, index }: { group: SalaryGroup; index: number }) {
     </article>
   )
 }
+/** Retain a selected value after suggestions change, avoiding a hidden active filter. */
 function FilterSelect({
   label,
   value,
@@ -924,6 +965,7 @@ function FilterSelect({
     </label>
   )
 }
+/** Loading placeholder announces one status rather than treating skeletons as real rows. */
 function LoadingTable() {
   return (
     <div className="loading-table" role="status" aria-label="Loading employees">
@@ -940,6 +982,7 @@ function LoadingTable() {
     </div>
   )
 }
+/** Distinguish an empty directory from an overrestrictive filter and offer the right recovery. */
 function EmptyState({
   filtered,
   clear,
@@ -968,6 +1011,7 @@ function EmptyState({
     </div>
   )
 }
+/** Reusable read failure with an explicit retry; no automatic write retries are performed. */
 function ErrorState({
   message,
   retry,
