@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from . import service
 from .database import connect, initialize
 from .domain import CURRENCY_DECIMALS, CSVImport, EmployeeInput, EmployeeUpdate, StatusChange, money
+from .middleware import BodySizeLimitMiddleware
 
 
 def create_app(database_path=None):
@@ -25,6 +26,8 @@ def create_app(database_path=None):
         version="1.0.0",
         description="Synthetic data demo. Do not enter real employee data.",
     )
+
+    app.add_middleware(BodySizeLimitMiddleware)
 
     @app.middleware("http")
     async def safety_headers(request: Request, call_next):

@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -319,6 +320,14 @@ class APITests(unittest.TestCase):
             "/api/employees/-1/history",
         ]:
             self.assertEqual(self.client.get(url).status_code, 422)
+
+    def test_chunked_body_limit(self):
+        raw = json.dumps(employee()).encode() + b" " * 5_100_001
+        response = self.client.post(
+            "/api/employees", headers={"content-type": "application/json"}, content=iter([raw])
+        )
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(self.client.get("/api/employees").json()["total"], 0)
 
     def test_options_and_health(self):
         self.create()
