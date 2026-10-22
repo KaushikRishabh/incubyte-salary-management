@@ -329,6 +329,24 @@ class APITests(unittest.TestCase):
         self.assertEqual(response.status_code, 413)
         self.assertEqual(self.client.get("/api/employees").json()["total"], 0)
 
+    def test_connection_can_resume_on_another_worker_thread(self):
+        db = connect(self.path)
+        try:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                self.assertEqual(
+                    pool.submit(lambda: db.execute("SELECT 1").fetchone()[0]).result(), 1
+                )
+        finally:
+            db.close()
+
+    def test_concurrent_reads(self):
+        self.create()
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            responses = list(
+                pool.map(lambda _: self.client.get("/api/employees").status_code, range(30))
+            )
+        self.assertEqual(responses, [200] * 30)
+
     def test_options_and_health(self):
         self.create()
         self.assertEqual(self.client.get("/api/options").json()["countries"], ["India"])
