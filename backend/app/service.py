@@ -150,8 +150,11 @@ def change_status(db, identifier, change, target):
 
 def import_csv(db, content):
     reader = csv.DictReader(io.StringIO(content.lstrip("\ufeff")), strict=True)
-    if reader.fieldnames != FIELDS:
-        raise HTTPException(422, "CSV header must be: " + ",".join(FIELDS))
+    try:
+        if reader.fieldnames != FIELDS:
+            raise HTTPException(422, "CSV header must be: " + ",".join(FIELDS))
+    except csv.Error:
+        raise HTTPException(422, "Malformed CSV header") from None
     rows, seen = [], set()
     try:
         for index, row in enumerate(reader, 2):
