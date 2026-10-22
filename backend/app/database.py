@@ -29,7 +29,9 @@ PRAGMA user_version = 1;
 
 
 def connect(path: str) -> sqlite3.Connection:
-    connection = sqlite3.connect(path, timeout=10)
+    # FastAPI may resume a synchronous dependency on a different worker thread.
+    # Each request owns this connection; it is never shared between requests.
+    connection = sqlite3.connect(path, timeout=10, check_same_thread=False)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
     connection.execute("PRAGMA busy_timeout=10000")
