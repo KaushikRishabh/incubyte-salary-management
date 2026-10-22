@@ -1,0 +1,240 @@
+Backend review verification log
+Recorded UTC: 2026-10-22T07:10:25Z
+
+Scope: local synthetic-data review; no publication or production deployment.
+
+COMMAND: .venv/bin/ruff check backend scripts
+All checks passed!
+
+COMMAND: .venv/bin/ruff format --check backend scripts
+13 files already formatted
+
+COMMAND: bash -n scripts/run-local.sh
+Shell syntax check passed.
+
+COMMAND: cd backend && ../.venv/bin/coverage run --rcfile=../pyproject.toml -m unittest discover -s tests -v
+/workspace/shared/incubyte-assessment/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_employee_cap_serializes_concurrent_creates (test_demo.DemoTests.test_employee_cap_serializes_concurrent_creates)
+Writer reservations prevent concurrent checks from spending the same capacity twice. ... ok
+test_history_cap_blocks_edits_and_status_atomically (test_demo.DemoTests.test_history_cap_blocks_edits_and_status_atomically)
+All mutation routes share the history budget and leave state unchanged on rejection. ... ok
+test_import_over_cap_has_no_partial_records (test_demo.DemoTests.test_import_over_cap_has_no_partial_records)
+Capacity is reserved for a whole batch, never only the first rows that fit. ... ok
+test_normal_mode_preserved_and_configuration_validated (test_demo.DemoTests.test_normal_mode_preserved_and_configuration_validated)
+Local mode remains uncapped; invalid opt-in settings fail explicitly. ... ok
+test_reset_creates_baseline_without_overwriting_backup (test_demo.DemoTests.test_reset_creates_baseline_without_overwriting_backup)
+Reset preparation is opt-in, fresh-path only and preserves existing backup bytes. ... ok
+test_restart_does_not_reset_persisted_capacity (test_demo.DemoTests.test_restart_does_not_reset_persisted_capacity)
+Restarting clears a process throttle but must not reclaim stored row capacity. ... ok
+test_throttle_counts_invalid_attempts_but_reads_work (test_demo.DemoTests.test_throttle_counts_invalid_attempts_but_reads_work)
+Rejected/unknown writes consume budget; spoofed IP headers cannot bypass it. ... ok
+test_throttle_window_recovers_without_sleep_and_memory_is_bounded (test_demo.DemoTests.test_throttle_window_recovers_without_sleep_and_memory_is_bounded)
+A fake clock verifies exact expiry and that denied attempts do not grow the queue. ... ok
+test_disconnect_abandons_incomplete_request (test_review.BodyBoundaryTests.test_disconnect_abandons_incomplete_request)
+A disconnected upload must not be treated as a complete, valid body. ... ok
+test_exact_byte_limit_replays_the_complete_body (test_review.BodyBoundaryTests.test_exact_byte_limit_replays_the_complete_body)
+Splitting a valid request into tiny chunks must not change its contents. ... ok
+test_over_limit_chunks_never_reach_the_application (test_review.BodyBoundaryTests.test_over_limit_chunks_never_reach_the_application)
+Reject before parsing or writing any data, even if the last chunk spills. ... ok
+test_receive_after_replay_still_observes_disconnect (test_review.BodyBoundaryTests.test_receive_after_replay_still_observes_disconnect)
+The buffer must not hide the original ASGI disconnect notification. ... ok
+test_commit_failure_rolls_back_before_success_response (test_review.ReviewRegressionTests.test_commit_failure_rolls_back_before_success_response)
+Function-scoped dependency cleanup must finish before sending HTTP 201. ... ok
+test_csv_shape_and_empty_batch_are_422_and_atomic (test_review.ReviewRegressionTests.test_csv_shape_and_empty_batch_are_422_and_atomic)
+Missing/extra columns, malformed quoting and no rows are client errors. ... ok
+test_csv_utf8_bom_and_quoted_commas_are_supported (test_review.ReviewRegressionTests.test_csv_utf8_bom_and_quoted_commas_are_supported)
+Spreadsheet-style BOMs and quoted human labels preserve their contents. ... ok
+test_currency_change_history_keeps_each_side_precision (test_review.ReviewRegressionTests.test_currency_change_history_keeps_each_side_precision)
+JPY integer units and USD cents must not be interpreted interchangeably. ... ok
+test_duplicate_status_transition_is_conflict_without_new_history (test_review.ReviewRegressionTests.test_duplicate_status_transition_is_conflict_without_new_history)
+Retrying an already-applied archive is not a second successful event. ... ok
+test_early_header_rejections_keep_security_and_no_cache_headers (test_review.ReviewRegressionTests.test_early_header_rejections_keep_security_and_no_cache_headers)
+Rejecting before the route must not skip the outer response protections. ... ok
+test_extremely_large_content_length_is_413_not_server_error (test_review.ReviewRegressionTests.test_extremely_large_content_length_is_413_not_server_error)
+A numeric header must not trip Python's maximum integer-string length. ... ok
+test_frontend_missing_build_has_actionable_error (test_review.ReviewRegressionTests.test_frontend_missing_build_has_actionable_error)
+A fresh checkout should return a useful 503 rather than an opaque failure. ... ok
+test_import_row_limit_rejects_entire_batch (test_review.ReviewRegressionTests.test_import_row_limit_rejects_entire_batch)
+The 10,001st row cannot leave the first 10,000 employees partially created. ... ok
+test_invalid_content_lengths_are_client_errors (test_review.ReviewRegressionTests.test_invalid_content_lengths_are_client_errors)
+Signed, fractional and nonnumeric header values are not byte lengths. ... ok
+test_leading_zero_content_length_does_not_overflow (test_review.ReviewRegressionTests.test_leading_zero_content_length_does_not_overflow)
+Normalize leading zeros before comparing an otherwise small byte length. ... ok
+test_schema_initialization_closes_its_owned_connection (test_review.ReviewRegressionTests.test_schema_initialization_closes_its_owned_connection)
+A transaction context commits but does not itself close SQLite handles. ... ok
+test_seed_closes_its_owned_connection (test_review.ReviewRegressionTests.test_seed_closes_its_owned_connection)
+CLI/startup seeding must release its file handle after committing. ... ok
+test_seed_rejects_out_of_scope_counts (test_review.ReviewRegressionTests.test_seed_rejects_out_of_scope_counts)
+Operator tooling should not start a huge or empty seed by accident. ... ok
+test_status_reason_rejects_control_characters_without_mutating_history (test_review.ReviewRegressionTests.test_status_reason_rejects_control_characters_without_mutating_history)
+Archive/restore explanations must obey the same audit rules as edits. ... ok
+test_status_versions_are_strict_integers (test_review.ReviewRegressionTests.test_status_versions_are_strict_integers)
+True, floats and strings must not impersonate an optimistic version token. ... ok
+test_analytics_exact_and_separate_currencies (test_salary.APITests.test_analytics_exact_and_separate_currencies)
+Integer sums stay exact; displayed averages round half up without mixing currencies. ... ok
+test_analytics_group_by_department_preserves_currency (test_salary.APITests.test_analytics_group_by_department_preserves_currency)
+A shared department never licenses summing two different monetary units. ... ok
+test_archive_restore_and_history (test_salary.APITests.test_archive_restore_and_history)
+Archive hides rather than deletes, blocks edits, and remains fully reversible. ... ok
+test_atomic_import_database_conflict_rollback (test_salary.APITests.test_atomic_import_database_conflict_rollback)
+A uniqueness conflict during insertion rolls back both employee and audit rows. ... ok
+test_atomic_import_success (test_salary.APITests.test_atomic_import_success)
+A valid multirow import reports the exact number of newly created employees. ... ok
+test_atomic_import_validation_rollback (test_salary.APITests.test_atomic_import_validation_rollback)
+A later invalid amount prevents the entire import, including earlier valid rows. ... ok
+test_chunked_body_limit (test_salary.APITests.test_chunked_body_limit)
+Enforce real upload bytes even when the client sends no trustworthy Content-Length. ... ok
+test_concurrent_reads (test_salary.APITests.test_concurrent_reads)
+Request-owned connections must tolerate overlapping readers without affinity failures. ... ok
+test_connection_can_resume_on_another_worker_thread (test_salary.APITests.test_connection_can_resume_on_another_worker_thread)
+FastAPI can run dependency setup and route work on different worker threads. ... ok
+test_create_and_persist (test_salary.APITests.test_create_and_persist)
+An independent app instance must observe committed data and the initial version. ... ok
+test_duplicate_code_case_insensitive (test_salary.APITests.test_duplicate_code_case_insensitive)
+ASCII code uniqueness applies across case differences at the database boundary. ... ok
+test_effective_date_cannot_go_backwards (test_salary.APITests.test_effective_date_cannot_go_backwards)
+Past-dated edits may not precede the current salary effective date. ... ok
+test_employee_code_immutable (test_salary.APITests.test_employee_code_immutable)
+A replacement payload cannot silently change the stable business identifier. ... ok
+test_empty_analytics (test_salary.APITests.test_empty_analytics)
+An empty dataset has zero headcount and no fabricated monetary totals. ... ok
+test_export_filter_and_formula_safety (test_salary.APITests.test_export_filter_and_formula_safety)
+Exports respect filters and neutralize spreadsheet formulas while preserving money. ... ok
+test_future_date_rejected (test_salary.APITests.test_future_date_rejected)
+The current-state model must not pretend to schedule future salary changes. ... ok
+test_import_duplicate_and_header_validation (test_salary.APITests.test_import_duplicate_and_header_validation)
+Reject case-insensitive duplicates within the CSV and an incompatible header. ... ok
+test_malformed_csv_header_is_client_error (test_salary.APITests.test_malformed_csv_header_is_client_error)
+Bad quoting and overlong CSV fields must produce 422, not an uncaught parser error. ... ok
+test_missing_employee (test_salary.APITests.test_missing_employee)
+Unknown identifiers produce a useful 404 rather than empty history or a server error. ... ok
+test_options_and_health (test_salary.APITests.test_options_and_health)
+API metadata remains useful and salary responses carry a no-store cache policy. ... ok
+test_out_of_range_identifiers_and_pages (test_salary.APITests.test_out_of_range_identifiers_and_pages)
+Bound integers before SQLite binding or offset arithmetic can overflow. ... ok
+test_pagination_filters_search (test_salary.APITests.test_pagination_filters_search)
+Stable pages, exact filters and literal search must not interpret user text as SQL. ... ok
+test_parallel_updates_have_one_winner (test_salary.APITests.test_parallel_updates_have_one_winner)
+Real competing request threads must yield exactly one successful version update. ... ok
+test_query_validation (test_salary.APITests.test_query_validation)
+Reject unbounded page sizes, invalid status values and arbitrary grouping identifiers. ... ok
+test_reject_empty_or_control_text (test_salary.APITests.test_reject_empty_or_control_text)
+Human labels must remain nonempty and free of embedded control bytes. ... ok
+test_reject_invalid_money_and_currency (test_salary.APITests.test_reject_invalid_money_and_currency)
+Invalid currency/amount pairs fail before leaving any employee row behind. ... ok
+test_required_fields_and_unknown_fields (test_salary.APITests.test_required_fields_and_unknown_fields)
+Strict payload shape prevents omitted or misspelled properties being ignored. ... ok
+test_seed_10000_idempotent (test_salary.APITests.test_seed_10000_idempotent)
+The full assessment-sized seed is repeatable and never duplicates initial history. ... ok
+test_stale_edit_does_not_overwrite (test_salary.APITests.test_stale_edit_does_not_overwrite)
+A stale editor must receive a conflict, never overwrite another saved salary. ... ok
+test_status_change_requires_current_version_and_reason (test_salary.APITests.test_status_change_requires_current_version_and_reason)
+Status mutations have the same concurrency and audit obligations as salary edits. ... ok
+test_update_history (test_salary.APITests.test_update_history)
+A salary edit increments its version and records exact old/new amounts and reason. ... ok
+test_exact_decimal_round_trip (test_salary.MoneyTests.test_exact_decimal_round_trip)
+Catch binary-float rounding regressions with an amount such as 0.29. ... ok
+test_invalid_money (test_salary.MoneyTests.test_invalid_money)
+Reject unsupported syntax, special Decimal values, precision and amount limits. ... ok
+test_money_boundaries_and_unsupported_currency (test_salary.MoneyTests.test_money_boundaries_and_unsupported_currency)
+Allow exact minimum/maximum salaries without accepting an unknown unit. ... ok
+test_zero_decimal_currency (test_salary.MoneyTests.test_zero_decimal_currency)
+JPY stores whole yen and must reject, rather than round, fractional input. ... ok
+
+----------------------------------------------------------------------
+Ran 63 tests in 4.056s
+
+OK
+
+COMMAND: cd backend && ../.venv/bin/coverage report --rcfile=../pyproject.toml
+Name                Stmts   Miss Branch BrPart  Cover   Missing
+---------------------------------------------------------------
+app/__init__.py         0      0      0      0   100%
+app/database.py        15      0      0      0   100%
+app/demo.py            50      0     18      0   100%
+app/domain.py          72      3     16      1    95%   44-45, 50
+app/main.py           119      1     14      2    98%   265->268, 275
+app/middleware.py      30      0     10      0   100%
+app/reset_demo.py      19      6      4      1    70%   33-40
+app/seed.py            28      5      8      1    83%   90-97
+app/service.py        127      0     42      0   100%
+---------------------------------------------------------------
+TOTAL                 460     15    112      5    97%
+
+ONE-OFF LIVE PROBE: disposable 10,000-row DB; actual loopback HTTP to Uvicorn; default demo limits employees=10500, history=12000, writes=30, window_seconds=60.
+The probe script is temporary verification tooling, not a shipped application command.
+[
+  {
+    "check": "health and default demo caps",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "10,000 employee baseline",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "built HTML served over TCP",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "create exact whole-yen salary",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "invalid audit control byte rejected",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "8 concurrent updates exactly one winner",
+    "result": "passed",
+    "detail": "[409, 409, 200, 409, 409, 409, 409, 409]"
+  },
+  {
+    "check": "JPY-to-USD history precision",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "archive and restore over TCP",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "real CSV formula-safe report",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "invalid batch rollback over TCP",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "current headcount stays accurate",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "oversized wire body rejected",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "reset CLI creates new baseline",
+    "result": "passed",
+    "detail": ""
+  },
+  {
+    "check": "reset CLI refuses to overwrite",
+    "result": "passed",
+    "detail": ""
+  }
+]
+
+Limitations: these 14 probes are scripted live HTTP/CLI checks, not manual browser interaction or a production load test. Docker build/runtime was not executed. The non-failing httpx TestClient deprecation warning is retained above.

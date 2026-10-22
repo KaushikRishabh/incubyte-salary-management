@@ -27,3 +27,8 @@ Use SQLite for a small single-service demo, integer minor units for money, separ
 
 ## Post-delivery readiness hardening
 After the first local artifact, added opt-in public-demo caps/throttles and a non-destructive operator reset preparer. The Dockerfile defaults to bounded mode. Added eight deterministic backend regressions and requested an independent adversarial review. This is a real subsequent increment, not a claim those safeguards existed in the earlier package. No deployment authorization was inferred.
+
+## Candidate-requested explanatory review
+The candidate subsequently requested: “I want u to go through the codebase and add comments explaining everything. Also review the code and test thoroughly again manually.” The assistant added purpose/invariant/transaction/state/error explanations across authored source and tests, with companion guides for strict JSON/generated files. Comments do not imply candidate authorship.
+
+A separate backend/frontend review found and fixed huge Content-Length handling, invalid audit-reason controls, connection cleanup, upload-buffer overhead, concurrent throttle timestamp ordering, stale archive/restore retry state, canceled-response races, pending-form edits, detached-opener focus restoration, request-header preservation, unreadable JSON errors and malformed display amounts. Regression coverage grew from 61 to 109 automated tests. This is a genuine later review, not fabricated earlier history. Real browser verification is separately recorded in manual-review.md, including controlled fixture differences and remaining gaps.
