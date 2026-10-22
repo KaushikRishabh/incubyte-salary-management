@@ -1,8 +1,9 @@
 """Small explicit relational schema and connection lifecycle."""
+
 import sqlite3
 from pathlib import Path
 
-SCHEMA = '''
+SCHEMA = """
 CREATE TABLE IF NOT EXISTS employees (
  id INTEGER PRIMARY KEY,
  employee_code TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -24,19 +25,19 @@ CREATE TABLE IF NOT EXISTS salary_history (
 );
 CREATE INDEX IF NOT EXISTS idx_history_employee ON salary_history(employee_id,id DESC);
 PRAGMA user_version = 1;
-'''
+"""
 
 
 def connect(path: str) -> sqlite3.Connection:
     connection = sqlite3.connect(path, timeout=10)
     connection.row_factory = sqlite3.Row
-    connection.execute('PRAGMA foreign_keys=ON')
-    connection.execute('PRAGMA busy_timeout=10000')
+    connection.execute("PRAGMA foreign_keys=ON")
+    connection.execute("PRAGMA busy_timeout=10000")
     return connection
 
 
 def initialize(path: str) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with connect(path) as connection:
-        connection.execute('PRAGMA journal_mode=WAL')
+        connection.execute("PRAGMA journal_mode=WAL")
         connection.executescript(SCHEMA)
