@@ -4,8 +4,8 @@ Verification performed on 22 October 2026 using the assistant's cloud workspace.
 
 ## Backend
 - Clean Python 3.12 virtual environment: installed pinned runtime and development dependencies successfully.
-- Python unittest suite: 34 tests passed, including a complete 10,000-record seed and idempotent second run.
-- Coverage.py with branch measurement: 91% combined statement/branch coverage over application modules. This is not 100% coverage or proof of all production behavior.
+- Python unittest suite: 42 tests passed, including a complete 10,000-record seed and idempotent second run.
+- Coverage.py with branch measurement: 92% combined statement/branch coverage over application modules. This is not 100% coverage or proof of all production behavior.
 - Ruff lint and formatting checks: passed for backend and benchmark script.
 - Independent review confirmed exact monetary boundaries, overlapping import rollback and update/archive contention. It discovered malformed CSV-header errors, integer overflow inputs and a streamed-body limit bypass. All three were fixed, with regression tests; the original streamed exploit now returns 413 and creates no records. A small streamed request remains valid.
 - FastAPI's current TestClient emits a non-failing Starlette deprecation warning for httpx. Tests still pass; this is recorded rather than hidden.
@@ -26,3 +26,8 @@ Verification performed on 22 October 2026 using the assistant's cloud workspace.
 - No remote repository was created, no hosted deployment was performed and no recruiter submission was sent.
 - Production authentication, permissions, backups and security review are intentionally outside the synthetic demo scope. Do not load real employee data.
 - Candidate personal review and ability to explain the solution remain required before submission.
+
+## Public-demo hardening verification
+Eight additional backend regressions pass: concurrent create caps, history-cap rollback, oversized import rollback, rejected-attempt throttle and read availability, fake-clock throttle recovery and bounded memory, persisted caps after app restart, normal-mode/configuration behavior, and non-overwriting reset preparation. This is 61 automated tests total including the unchanged 19 frontend tests. Demo policy module coverage is 100% in this run; overall application coverage is 92%. Full deployment and container verification remain pending.
+
+Independent hardening review also executed: 80 concurrent creates at a seven-row cap (7 creates, 73 rejections); 20 concurrent two-row imports at a six-row cap (3 successes, 17 full rejections); 50 competing edits at an eight-history-row cap; spoofed-IP throttle contention; recovery; normal-mode acceptance of 140 rows; and hash-preserving reset. No mutation/cap bypass was found. The review clarified that early malformed/oversized Content-Length header rejections occur before the application throttle; documentation now states this accurately.

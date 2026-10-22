@@ -12,11 +12,13 @@ from fastapi.staticfiles import StaticFiles
 
 from . import service
 from .database import connect, initialize
+from .demo import DemoWriteThrottle, capacity, configured_limits, remaining_capacity
 from .domain import CURRENCY_DECIMALS, CSVImport, EmployeeInput, EmployeeUpdate, StatusChange, money
 from .middleware import BodySizeLimitMiddleware
 
 
-def create_app(database_path=None):
+def create_app(database_path=None, *, demo_limits=None):
+    limits = demo_limits if demo_limits is not None else configured_limits()
     path = database_path or os.getenv(
         "SALARY_DB", str(Path(__file__).parents[1] / "data" / "salary.sqlite3")
     )
@@ -28,6 +30,8 @@ def create_app(database_path=None):
     )
 
     app.add_middleware(BodySizeLimitMiddleware)
+    if limits is not None:
+        app.add_middleware(DemoWriteThrottle, limits=limits)
 
     @app.middleware("http")
     async def safety_headers(request: Request, call_next):
@@ -73,7 +77,12 @@ def create_app(database_path=None):
     @app.get("/api/health")
     def health(db=Depends(database, scope="function")):
         db.execute("SELECT 1")
-        return {"status": "ok", "mode": "synthetic-demo"}
+        return {
+            "status": "ok",
+            "mode": "synthetic-demo",
+            "demo_limits_enabled": limits is not None,
+            "limits": vars(limits) if limits else None,
+        }
 
     @app.get("/api/options")
     def options(db=Depends(database, scope="function")):
@@ -103,7 +112,9 @@ def create_app(database_path=None):
     @app.post("/api/employees/import", status_code=201)
     def import_employees(body: CSVImport, db=Depends(database, scope="function")):
         db.execute("BEGIN IMMEDIATE")
-        return {"created": service.import_csv(db, body.csv)}
+        return {
+            "created": service.import_csv(db, body.csv, capacity=remaining_capacity(db, limits))
+        }
 
     @app.get("/api/employees")
     def employees(
@@ -130,6 +141,7 @@ def create_app(database_path=None):
     @app.post("/api/employees", status_code=201)
     def create(body: EmployeeInput, db=Depends(database, scope="function")):
         db.execute("BEGIN IMMEDIATE")
+        capacity(db, limits, employee_rows=1)
         return service.create_employee(db, body)
 
     @app.put("/api/employees/{identifier}")
@@ -139,6 +151,7 @@ def create_app(database_path=None):
         db=Depends(database, scope="function"),
     ):
         db.execute("BEGIN IMMEDIATE")
+        capacity(db, limits)
         return service.update_employee(db, identifier, body)
 
     @app.post("/api/employees/{identifier}/archive")
@@ -148,6 +161,7 @@ def create_app(database_path=None):
         db=Depends(database, scope="function"),
     ):
         db.execute("BEGIN IMMEDIATE")
+        capacity(db, limits)
         return service.change_status(db, identifier, body, "archived")
 
     @app.post("/api/employees/{identifier}/restore")
@@ -157,6 +171,7 @@ def create_app(database_path=None):
         db=Depends(database, scope="function"),
     ):
         db.execute("BEGIN IMMEDIATE")
+        capacity(db, limits)
         return service.change_status(db, identifier, body, "active")
 
     @app.get("/api/employees/{identifier}/history")
