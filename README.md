@@ -89,3 +89,15 @@ Keep the database on a persistent volume. One service instance is the intended t
 - `docs/verification.md`: checks actually run and remaining delivery gates.
 
 The assistant generated and checked this implementation. The candidate must review it, make their own decisions and be prepared to explain the code. Remote repository publication, hosted deployment and the recruiter submission are separate approval-gated delivery steps, not implied by this local repository.
+
+## Review artifacts
+
+- `docs/requirements.pdf`: one-page scope (text committed before code).
+- `docs/verification.md`: exact executed tests and known verification limits.
+- `docs/source-and-ai-record.md`: honest AI assistance and review record.
+- `docs/walkthrough.md`: explanation and live-demo script.
+- `docs/screenshots/`: genuine captures from the running application.
+- `docs/demo-notes.md`: screenshot video provenance and limitations.
+- `docs/release-checklist.md`: remaining deployment and submission gates.
+
+The delivery ZIP also contains a Git bundle preserving actual incremental commits and a labelled screenshot-walkthrough MP4. No real employee database is included; run the seed script.

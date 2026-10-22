@@ -8,7 +8,7 @@ Verified requirements: salary management for 10,000 multinational employees, HR 
 The brief deliberately leaves feature selection to the candidate. Requirements in requirements.md are explicit proposed scope, not quotations or hidden assumptions about payroll policy.
 
 ## Authorship and workflow
-This implementation is being generated and checked with OpenAI's coding assistant at the candidate's request. The assistant read the specification, proposed the product scope, and writes implementation, tests and documentation. The candidate has not yet personally reviewed or explained this code. Do not claim that this was independently authored by the candidate or that their review has occurred.
+This implementation was generated and checked with OpenAI's coding assistant at the candidate's request. The assistant read the specification, proposed the product scope, and wrote implementation, tests and documentation. The candidate has not yet personally reviewed or explained this code. Do not claim that this was independently authored by the candidate or that their review has occurred.
 
 The candidate should run the project, inspect the key decisions and test results, change anything they disagree with and be able to explain the code before submission. Commit history records actual increments, without backdating or fabricated intermediate work. No recruiter submission or remote publication is authorized by creating local code.
 
@@ -17,3 +17,10 @@ Implement the actual Incubyte assessment on the assistant's computer after readi
 
 ## Decisions before code
 Use SQLite for a small single-service demo, integer minor units for money, separate currency aggregates, optimistic row versions, transactional CSV import and reversible archive. No real employee data or external AI calls are needed.
+
+## Development and review record
+- Scope committed before implementation, then backend/domain tests, numerical hardening and setup docs, requirements PDF, CSV and input-bound fixes, streamed-body bounds, and React implementation with live integration fix. These are actual commits, not fabricated TDD history. Some tests were written alongside implementation rather than demonstrably red-first.
+- Frontend development instruction: implement the documented React/TypeScript salary workspace against the established API; include filtering, pagination, edits, history, archive/restore, CSV workflows, accessibility, synthetic-data warnings and tests.
+- Independent review instruction: exercise monetary boundaries, malformed requests, CSV atomicity, concurrent writes and input/resource limits; report reproducible defects rather than just style changes.
+- Review found malformed CSV headers, SQLite integer overflows and a streamed body-limit bypass. Regression tests accompanied fixes. Browser integration then found a worker-thread lifecycle bug, which was fixed and retested rather than hidden.
+- Exact final executed checks and limitations are in verification.md. No personal candidate review, remote deployment or final submission has been claimed.
