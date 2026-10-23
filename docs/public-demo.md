@@ -35,3 +35,7 @@ SALARY_DEMO_MODE=1 ../.venv/bin/python -m app.reset_demo \
 Choose a new path that has never existed. The command refuses existing files and requires demo mode and the explicit synthetic-only flag. It creates a fresh deterministic 10,000-employee baseline. It never modifies the prior database. Keep the old database and any companion WAL/SHM files together as the recoverable previous state, then set `SALARY_DB` to the new path and restart with bounded mode and one worker. Verify health, initial count and a demo workflow. To recover the previous state, stop the server and point `SALARY_DB` back at the preserved database.
 
 Repeated resets create retained database files, so the operator must manage backups and disk quota. No automatic deletion is performed. A failed preparation may leave a partial new file; use a different fresh path and investigate rather than overwriting it. Database paths are operator-selected local paths, never accepted from HTTP requests.
+
+## Free disposable hosting
+
+For the explicitly fictional, free assessment deployment, an ephemeral host can be used only with a clear reset/sleep warning. This is an exception to durable hosting, not a claim of persistence. See [free-demo-hosting.md](free-demo-hosting.md) for the Render configuration and exact limitations. Never use the disposable option for real data.
