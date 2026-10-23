@@ -106,3 +106,6 @@ For any future public demo, enable `SALARY_DEMO_MODE=1` and follow [the bounded-
 
 ## Understanding and review
 Start with [the code walkthrough](docs/understanding-code.md), [backend guide](docs/backend-code-guide.md), [frontend guide](frontend/README.md) and [second manual review](docs/manual-review.md). Inline comments explain invariants, transactions, money, UI state and test intent. Current verification: 109 automated tests (63 backend, 46 frontend), 97% backend statement/branch coverage; see the logs for actual executed commands and limitations.
+
+## Free demo release preparation
+See [hosting limits](docs/free-demo-hosting.md) and [container security checks](docs/deployment-security.md). The [screenshot walkthrough video](docs/demo/screenshot-walkthrough.mp4) uses genuine local UI captures and is not a continuous recording. Public deployment links will be added only after verification.
