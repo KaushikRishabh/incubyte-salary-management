@@ -377,7 +377,7 @@ export default function App() {
               </h2>
               <span className="count-label">
                 <Icon name="people" size={15} />
-                {count == null ? '—' : count.toLocaleString()} employees in view
+                {count == null ? '-' : count.toLocaleString()} employees in view
               </span>
             </div>
             {summaryError ? (
@@ -694,7 +694,7 @@ export default function App() {
                       <span>
                         Showing{' '}
                         <strong>
-                          {employees.total ? (page - 1) * pageSize + 1 : 0}–
+                          {employees.total ? (page - 1) * pageSize + 1 : 0}-
                           {Math.min(page * pageSize, employees.total)}
                         </strong>{' '}
                         of <strong>{employees.total.toLocaleString()}</strong>{' '}

@@ -11,13 +11,13 @@ describe('display formatting', () => {
   })
   it('labels compact numbers and missing values', () => {
     expect(money('1250000', 'USD', true)).toBe('USD 1.3m')
-    expect(money(null, 'USD')).toBe('—')
-    expect(money('not-money', 'USD')).toBe('—')
+    expect(money(null, 'USD')).toBe('-')
+    expect(money('not-money', 'USD')).toBe('-')
   })
   // Number() alone treats empty/whitespace strings as zero and accepts exponent notation.
   it.each(['', ' ', '1e3', '0x10', '.5', 'Infinity', '12,000.00'])(
     'rejects non-decimal display input %j',
-    (value) => expect(money(value, 'USD')).toBe('—'),
+    (value) => expect(money(value, 'USD')).toBe('-'),
   )
   it('preserves very large full amounts without rounding their cents', () => {
     expect(money('9007199254740993.01', 'USD')).toBe(
