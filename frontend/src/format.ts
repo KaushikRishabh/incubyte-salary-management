@@ -8,10 +8,10 @@ export function money(
   compact = false,
 ): string {
   // Accept plain decimal notation only; Number('') or Number('1e3') would be misleading.
-  if (amount == null || !/^-?\d+(\.\d+)?$/.test(amount)) return '—'
+  if (amount == null || !/^-?\d+(\.\d+)?$/.test(amount)) return '-'
   const [whole, decimals = ''] = amount.split('.')
   const numeric = Number(amount)
-  if (!Number.isFinite(numeric)) return '—'
+  if (!Number.isFinite(numeric)) return '-'
   if (compact && numeric >= 1_000_000)
     return `${currency} ${new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(numeric / 1_000_000)}m`
   if (compact && numeric >= 100_000)
