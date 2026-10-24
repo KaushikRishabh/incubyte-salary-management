@@ -4,6 +4,16 @@ A Python + React salary-management demonstrator for the Incubyte engineering ass
 
 **Synthetic demo only. There is no user authentication or authorization. Do not enter real employee data, expose this to a private production network, or mistake it for a payroll system.**
 
+## Live demo
+
+[Open the deployed application](https://incubyte-salary-management-rm51.onrender.com). Render Free hosts the real Python API, React UI and SQLite database. The Docker build and public browser workflows were verified on October 24, 2026 at commit `e863a5d`.
+
+The service can take 50 seconds or more to wake after inactivity. All data is fictional and shared. SQLite is ephemeral on this free host: edits persist across browser refreshes but can reset on sleep, instance replacement or redeployment. It is not durable production storage. Demo caps and the single-worker write throttle are enabled by the Docker configuration.
+
+Public browser verification covered the 10,000-row seed, JPY fractional-value rejection, create/edit/history, archive/restore, full-page refresh persistence, invalid/corrected CSV import, currency-separated insights and a downloaded 10,002-row export. Two fictional QA records remain. Earlier local checks passed 109 tests; public deployment testing did not rerun that entire suite or a load test.
+
+[Watch the labelled screenshot walkthrough](docs/demo/screenshot-walkthrough.mp4). This uses genuine local application captures, not a continuous live screen recording. Recruiter submission remains pending candidate approval.
+
 ## Development history and AI assistance
 
 The original incremental Git history is preserved without recreating or backdating commits. The source and AI collaboration record is in [docs/source-and-ai-record.md](docs/source-and-ai-record.md). The implementation was generated and tested with AI assistance; candidate personal review is not claimed.
@@ -82,7 +92,7 @@ docker build -t acme-salary .
 docker run --rm -p 127.0.0.1:8000:8000 -v acme-salary-data:/data acme-salary
 ```
 
-Keep the database on a persistent volume. One service instance is the intended topology; SQLite is not a shared multi-instance database. Container packaging is not a deployed hosted service. See verification notes for whether the container build was actually executed.
+Keep the database on a persistent volume. One service instance is the intended topology; SQLite is not a shared multi-instance database. The October 24 Render deployment built and ran this Dockerfile successfully. Earlier local verification notes describe the environment before deployment.
 
 ## Engineering and assessment artifacts
 
@@ -112,4 +122,4 @@ For any future public demo, enable `SALARY_DEMO_MODE=1` and follow [the bounded-
 Start with [the code walkthrough](docs/understanding-code.md), [backend guide](docs/backend-code-guide.md), [frontend guide](frontend/README.md) and [second manual review](docs/manual-review.md). Inline comments explain invariants, transactions, money, UI state and test intent. Current verification: 109 automated tests (63 backend, 46 frontend), 97% backend statement/branch coverage; see the logs for actual executed commands and limitations.
 
 ## Free demo release preparation
-See [hosting limits](docs/free-demo-hosting.md) and [container security checks](docs/deployment-security.md). The [screenshot walkthrough video](docs/demo/screenshot-walkthrough.mp4) uses genuine local UI captures and is not a continuous recording. Public deployment links will be added only after verification.
+See [hosting limits](docs/free-demo-hosting.md) and [container security checks](docs/deployment-security.md). The [screenshot walkthrough video](docs/demo/screenshot-walkthrough.mp4) uses genuine local UI captures and is not a continuous recording. The verified public demo link and hosted-test summary are above.
