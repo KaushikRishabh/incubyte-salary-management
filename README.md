@@ -4,6 +4,18 @@ A Python + React salary-management demonstrator for the Incubyte engineering ass
 
 **Synthetic demo only. There is no user authentication or authorization. Do not enter real employee data, expose this to a private production network, or mistake it for a payroll system.**
 
+## Development history and AI assistance
+
+This GitHub branch is a publication snapshot, not the original development branch. The complete genuine incremental history is preserved in [history.bundle](history.bundle), with its original commits, authors and dates. No commits were recreated or backdated to simulate development. To inspect the evolution after cloning this repository:
+
+```sh
+git bundle verify history.bundle
+git clone history.bundle ../incubyte-development-history
+git -C ../incubyte-development-history log --oneline --reverse
+```
+
+The source and AI collaboration record is in [docs/source-and-ai-record.md](docs/source-and-ai-record.md). The implementation was generated and tested with AI assistance; candidate personal review is not claimed. GitHub's visible commits record publication updates only. The reviewer must open the bundled repository to inspect the original development timeline.
+
 ## Quick start
 
 Requirements: Python 3.12+, Node.js 22+ and npm. From the repository root:
