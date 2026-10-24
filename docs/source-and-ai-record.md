@@ -35,3 +35,6 @@ A separate backend/frontend review found and fixed huge Content-Length handling,
 
 ## Publication preparation
 On 23 October 2026 the candidate authorized a public repository, free fictional-data demo and final recruiter submission. Earlier statements that publication was not authorized describe the earlier local-only stage. Public links and submission must still be verified before claiming completion. A history-wide release audit found no detected secrets or real employee data; all current authored en/em dashes were changed to ASCII hyphens. Historical commits remain unchanged. The audit does not certify every generated artifact timestamp: the requirements text was committed first, while PDF metadata is not used as timing evidence.
+
+## Public history delivery
+The public GitHub repository was created on 24 October 2026. Secure CLI credential storage was unavailable, so publication uses an explicitly labelled source snapshot plus a Git bundle preserving the original incremental history. The visible GitHub graph is not presented as the original development timeline. No original commit identities or dates were recreated. Final email submission remains held for candidate review of the exact draft.
